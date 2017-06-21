@@ -12,6 +12,9 @@
 #include <vector>
 #include <mpi.h>
 
+std::string outputdir = 
+    "/home/sci/qwu/Projects/multiThread/compositing/output/";
+
 bool sortImgMetaDataByDepth
 (slivr::ImgMetaData const& before, slivr::ImgMetaData const& after)
 { return before.avg_z > after.avg_z; }
@@ -20,15 +23,20 @@ bool sortImgMetaDataByEyeSpaceDepth
 { return before.eye_z > after.eye_z; }
 
 inline void InitImage
-(int minX, int maxX, int minY, int maxY, int myRank, Image &img, int idx, bool randSizeImg)
+(int minX, int maxX, int minY, int maxY, 
+ int myRank, Image &img, int idx, bool randSizeImg)
 {
     int dimsX = maxX - minX;
     int dimsY = maxY - minY;
     // random image dimension
     int rminX = rand() % (dimsX-1);
-    int rmaxX = rminX + 1 + rand() % (std::min(50, maxX - (rminX+1)));    
+    int rmaxX = rminX + 1 + rand() % (maxX - (rminX+1));
+    rminX = rand() % (dimsX-1-80);
+    rmaxX = rminX + 1 + 80;
     int rminY = rand() % (dimsY-1);
-    int rmaxY = rminY + 1 + rand() % (std::min(20, maxY - (rminY+1)));
+    int rmaxY = rminY + 1 + rand() % (maxY - (rminY+1));
+    rminY = rand() % (dimsY-1-20);
+    rmaxY = rminY + 1 + 20;
     // random image 
     float depth = (rand() % 100)/100.0;
     // random color
@@ -52,12 +60,18 @@ inline void InitImage
     }
     img.SetDepth(depth);
     clock.Stop();
-    std::cout << "spent " << clock.GetDuration() << " seconds to create subimage " 
-	      << "position " << rminX << " " << rmaxX << " " << rminY << " " << rmaxY << " "
-	      << "color " << color.r << " " << color.g << " " << color.b << " " << color.a
-	      << std::endl;
-    // img.OutputPPM("/home/sci/qwu/Projects/multiThread/compositing/output/rank-" + 
-    //               std::to_string(myRank) + "-idx-" + std::to_string(idx) + ".ppm");
+    // std::cout << "spent " << clock.GetDuration() 
+    // 	      << " seconds to create subimage " 
+    // 	      << "position " 
+    // 	      << rminX << " " << rmaxX << " " 
+    // 	      << rminY << " " << rmaxY << " "
+    // 	      << "color " 
+    // 	      << color.r << " " << color.g << " " << color.b << " " << color.a
+    // 	      << std::endl;
+    // img.OutputPPM(outputdir + 
+    // 		  "rank-" + 
+    //               std::to_string(myRank) + 
+    // 		  "-idx-" + std::to_string(idx) + ".ppm");
 }
 
 // Arguments:
@@ -67,9 +81,9 @@ inline void InitImage
 int main(int argc, char* argv[])
 {   
     // read in arguments
-    int width  = (argc > 1) ? atoi(argv[1]) : 512;
-    int height = (argc > 2) ? atoi(argv[2]) : 512;
-    bool randSizeImg = (argc > 3) ? atoi(argv[4]) == 1 : false;
+    int width  = (argc > 1) ? atoi(argv[1]) : 716 - 34;
+    int height = (argc > 2) ? atoi(argv[2]) : 453 - 237;
+    bool randSizeImg = (argc > 3) ? atoi(argv[4]) == 0 : true;
     int fullImageExtents[4] = {0, width, 0, height};
 
     // MPI stuff
@@ -99,7 +113,8 @@ int main(int argc, char* argv[])
 	std::vector<Image> imgList(numPatches);
 	// randomly create images
 	for (int i = 0; i < numPatches; ++i) {
-	    InitImage(minX, maxX, minY, maxY, myRank, imgList[i], i, randSizeImg);
+	    InitImage(minX, maxX, minY, maxY, 
+		      myRank, imgList[i], i, randSizeImg);
 	}
 	// composition
 	clock.Start();
@@ -171,7 +186,9 @@ int main(int argc, char* argv[])
 	allPatchMeta.clear();
 	allPatchData.clear();
 
-	slivr::WriteArrayToPPM("/home/sci/qwu/Projects/multiThread/compositing/output/composed", 
+	clock.Stop();
+
+	slivr::WriteArrayToPPM(outputdir + "composed", 
 			       composedData, renderedWidth, renderedHeight);
 
 	//     //
@@ -352,11 +369,11 @@ int main(int argc, char* argv[])
 	//     slivr::CheckMemoryHere
 	// 	("avtRayTracer::Execute final compositing done");
 
-        ////////////////////////////////////////////////////////////////////////////////
-
-
-	clock.Stop();
-	std::cout << "[Single Thread] " << clock.GetDuration() << " seconds to finish" << std::endl;
+        ////////////////////////////////////////////////////////////////////////
+	
+	std::cout << "[Single Thread] " 
+		  << clock.GetDuration() 
+		  << " seconds to finish" << std::endl;
     } 
     else
     {

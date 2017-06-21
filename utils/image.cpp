@@ -61,7 +61,12 @@ void Image::DeleteImage() {
 
 void Image::InitZero() {
     int dims = (extents[3]-extents[2]) * (extents[1]-extents[0]);
-    #pragma omp parallel for simd
+
+#ifdef __INTEL_COMPILER
+#   pragma omp parallel for simd
+#else
+#   pragma omp parallel for
+#endif
     for (int i = 0; i < dims * 4; i++) { // estimated potential speedup: 8.370
         data[i] = 0;
     }
@@ -100,7 +105,11 @@ void Image::InitZero() {
     bbox[2] = extents[2];
     bbox[3] = extents[3];
 
-    #pragma omp parallel for simd shared(col) aligned(tempImg:ALIGN) 
+#ifdef __INTEL_COMPILER
+#   pragma omp parallel for simd shared(col) aligned(tempImg:ALIGN) 
+#else
+#   pragma omp parallel for shared(col)
+#endif
     for (i=0; i<sizeImg*step; i+=step){
         tempImg[i+0] = col.r;
         tempImg[i+1] = col.g;
@@ -124,7 +133,12 @@ void Image::ColorImage
     bbox[3] = maxY;
 
     float *tempImg = data;
-    #pragma omp parallel for simd shared(col) aligned(tempImg:ALIGN) 
+
+#ifdef __INTEL_COMPILER
+#   pragma omp parallel for simd shared(col) aligned(tempImg:ALIGN) 
+#else
+#   pragma omp parallel for shared(col)
+#endif
     for (int y=minY; y<maxY; y++) {
 	for (int x=minX; x<maxX; x++) {
 	    index = y*widthImg*step + x*step;
@@ -150,7 +164,11 @@ void Image::ColorImage
     bbox[2] = minY;
     bbox[3] = maxY;
 
-    #pragma omp parallel for simd 
+#ifdef __INTEL_COMPILER
+#   pragma omp parallel for simd  
+#else
+#   pragma omp parallel for
+#endif
     for (int y=minY; y<maxY; y++) {
         for (int x=minX; x<maxX; x++) {
             indexDst = (y-extents[2])*widthDst*step + (x-extents[0])*step;
@@ -168,7 +186,11 @@ void Image::BlendWithBackground(Color backgroundColor)
     int dims = (extents[3]-extents[2]) * (extents[1]-extents[0]);
     
     // estimated potential speedup: 0.470
-    #pragma omp parallel for simd 
+#ifdef __INTEL_COMPILER
+#   pragma omp parallel for simd 
+#else
+#   pragma omp parallel for
+#endif
     for (int indexDst=0; indexDst<dims*4; indexDst+=4)
     {
 	float alpha = (1.0 - data[indexDst+3]);
@@ -191,7 +213,11 @@ void Image::PlaceInImage
     int step = 4;   // r,g,b,a = 4
 
     // estimated potential speedup: 0.920
-    #pragma omp parallel for simd 
+#ifdef __INTEL_COMPILER
+#   pragma omp parallel for simd 
+#else
+#   pragma omp parallel for
+#endif
     for (int y=srcMinY; y<srcMaxY; y++) {
         for (int x=srcMinX; x<srcMaxX; x++) {
             indexDst = ((y-extents[2]   ) * widthDst + x-extents[0]   ) * step;
@@ -214,7 +240,11 @@ void Image::PlaceInOpaqueImage
     int step = 3;   // r,g,b,a = 4
 
     // estimated potential speedup: 0.920
-    #pragma omp parallel for simd 
+#ifdef __INTEL_COMPILER
+#   pragma omp parallel for simd 
+#else
+#   pragma omp parallel for
+#endif
     for (int y=srcMinY; y<srcMaxY; y++) {      
 	for (int x=srcMinX; x<srcMaxX; x++) {
 	    indexDst = ((y-extents[2]   ) * widthDst + x-extents[0]   ) * step;
