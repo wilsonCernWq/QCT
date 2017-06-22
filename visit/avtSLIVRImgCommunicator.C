@@ -394,7 +394,7 @@ avtSLIVRImgCommunicator::BlendBackToFront
     const int endY = 
 	std::min(std::min(blendExtents[3], srcExtents[3]), dstExtents[3]);
 
-//#pragma omp parallel for
+    #pragma omp parallel
     for (int y = startY; y < endY; ++y) {
 	for (int x = startX; x < endX; ++x) {	  	    
 	    if (false/*DebugStream::Level5()*/)
