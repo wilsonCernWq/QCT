@@ -1,0 +1,1 @@
+# Read a graph and construct an optimized compositing tree

@@ -15,11 +15,11 @@
 std::string outputdir = 
     "/home/sci/qwu/Projects/multiThread/compositing/output/";
 
-bool sortImgMetaDataByDepth
-(slivr::ImgMetaData const& before, slivr::ImgMetaData const& after)
+bool sortImgMetaDataByDepth(slivr::ImgMetaData const& before, 
+			    slivr::ImgMetaData const& after)
 { return before.avg_z > after.avg_z; }
-bool sortImgMetaDataByEyeSpaceDepth
-(slivr::ImgMetaData const& before, slivr::ImgMetaData const& after)
+bool sortImgMetaDataByEyeSpaceDepth(slivr::ImgMetaData const& before,
+				    slivr::ImgMetaData const& after)
 { return before.eye_z > after.eye_z; }
 
 inline void InitImage
@@ -189,13 +189,9 @@ int main(int argc, char* argv[])
 		  << clock.GetDuration() 
 		  << " seconds to finish" << std::endl;
     } 
-    else
-    {
-
-    }
+    else {}
 
     MPI_Finalize();
 
     return 0;
 }
-
