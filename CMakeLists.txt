@@ -39,13 +39,4 @@ macro(BUILD_ALL surfix flag)
   set_target_properties(composer_${surfix} PROPERTIES COMPILE_FLAGS "${MPI_COMPILE_FLAGS} ${flag}")
   set_target_properties(composer_${surfix} PROPERTIES LINK_FLAGS "${MPI_LINK_FLAGS} ${flag}")
 endmacro()
-
-#--- reference version
-BUILD_ALL("ref" "")
-#--- auto optimized version
-BUILD_ALL("auto" "-O3")
-#--- openMP version
-BUILD_ALL("omp" "${OpenMP_CXX_FLAGS}")
-#--- full version
 BUILD_ALL("full" "-O3 ${OpenMP_CXX_FLAGS}")
-

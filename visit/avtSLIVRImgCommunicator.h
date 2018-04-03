@@ -48,6 +48,7 @@
 #include <algorithm>
 #include <string>
 #include <map>
+#include <vector>
 
 #ifdef PARALLEL
 #   include <mpi.h>
