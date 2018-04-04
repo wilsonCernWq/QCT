@@ -3,9 +3,6 @@ cmake_minimum_required (VERSION 3.5)
 project (HotT)
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG")
 
-#cmake_policy(SET CMP0004 OLD)
-#add_definitions(-std=c++11)
-
 # find TBB 
 find_package(TBB QUIET)
 
@@ -44,7 +41,9 @@ endif()
 
 # marco to build project
 macro(BUILD_ALL surfix flag)
+
   message("building ${surfix} version - flags: ${flag}")
+
   # helper library
   add_library(utils_${surfix}
     algorithms/visit/avtSLIVRImgCommunicator.C
@@ -61,6 +60,7 @@ macro(BUILD_ALL surfix flag)
     PROPERTIES
     CXX_STANDARD 11
     COMPILE_FLAGS "${flag}")
+
   # main program
   add_executable(composer_${surfix} main.cpp)
   target_link_libraries(composer_${surfix} 
@@ -70,5 +70,7 @@ macro(BUILD_ALL surfix flag)
     PROPERTIES
     CXX_STANDARD 11
     COMPILE_FLAGS "${flag}")
+
 endmacro()
+
 BUILD_ALL("o3" "-O3")
