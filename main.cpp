@@ -3,8 +3,10 @@
 #include "utils/image.h"
 #include "utils/timer.h"
 
-#include "visit/avtSLIVRImgMetaData.h"
-#include "visit/avtSLIVRImgCommunicator.h"
+#include "composition/avtSLIVRImgMetaData.h"
+#include "composition/avtSLIVRImgCommunicator.h"
+
+// build a binary tree compositing program step by step
 
 #include <stdlib.h>
 #include <unistd.h>
@@ -12,8 +14,7 @@
 #include <vector>
 #include <mpi.h>
 
-std::string outputdir = 
-    "/home/sci/qwu/Projects/multiThread/compositing/output/";
+std::string outputdir = "./";
 
 bool sortImgMetaDataByDepth(slivr::ImgMetaData const& before, 
 			    slivr::ImgMetaData const& after)
@@ -44,7 +45,7 @@ inline void InitImage
     // create image
     Timer clock;
     clock.Start();
-    if (randSizeImg)  // random sized images
+    if (randSizeImg) // random sized images
     {
         img.CreateImage(rminX, rmaxX, rminY, rmaxY);
         img.ColorImage(color);
@@ -106,6 +107,7 @@ int main(int argc, char* argv[])
 
     // random image
     if (numProcs == 1) {
+
 	int numPatches = 800;
 	std::vector<Image> imgList(numPatches);
 	// randomly create images
@@ -185,11 +187,14 @@ int main(int argc, char* argv[])
 
         ////////////////////////////////////////////////////////////////////////
 	
-	std::cout << "[Single Thread] " 
+	std::cout << "[Single Node] " 
 		  << clock.GetDuration() 
 		  << " seconds to finish" << std::endl;
     } 
-    else {}
+    else {
+	std::cout << "[Multiple Node] Not Implemented" << std::endl;
+      
+    }
 
     MPI_Finalize();
 

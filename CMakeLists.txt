@@ -16,7 +16,7 @@ endif()
 
 # set include directory
 include_directories(
-  visit 
+  composition
   utils
   ${MPI_INCLUDE_PATH}
 )
@@ -26,8 +26,8 @@ macro(BUILD_ALL surfix flag)
   message("building ${surfix} version - flags: ${flag}")
   # helper library
   add_library(utils_${surfix}
-    visit/avtSLIVRImgCommunicator.C
-    visit/avtSLIVRImgMetaData.C
+    composition/avtSLIVRImgCommunicator.C
+    composition/avtSLIVRImgMetaData.C
     utils/image.cpp
     utils/timer.cpp
     )
