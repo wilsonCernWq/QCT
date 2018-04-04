@@ -3,11 +3,11 @@
 #include "utils/image.h"
 #include "utils/timer.h"
 
-#include "engine/avtSLIVRImgMetaData.h"
-#include "engine/avtSLIVRImgCommunicator.h"
+#include "algorithms/visit/avtSLIVRImgMetaData.h"
+#include "algorithms/visit/avtSLIVRImgCommunicator.h"
 
 // build a binary tree compositing program step by step
-#include "common/TreeDiagram.h"
+#include "algorithms/tree/common/TreeDiagram.h"
 
 #include <stdlib.h>
 #include <unistd.h>

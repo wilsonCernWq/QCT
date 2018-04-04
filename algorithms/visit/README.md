@@ -1,0 +1,1 @@
+Simulating the image compositing component in VisIt
