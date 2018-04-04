@@ -7,6 +7,7 @@
 #include "engine/avtSLIVRImgCommunicator.h"
 
 // build a binary tree compositing program step by step
+#include "common/TreeDiagram.h"
 
 #include <stdlib.h>
 #include <unistd.h>
