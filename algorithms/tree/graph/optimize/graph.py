@@ -138,8 +138,11 @@ if __name__ == '__main__':
     g.addEdge(6, 8, 6)
     g.addEdge(7, 8, 7)
 
+    print("Original Graph with Weight: ", g.graph)
+
     # MST
     MST = KruskalMST(g)
+    print("MST: ", MST)
 
     g2 = Graph2()
 
@@ -148,4 +151,4 @@ if __name__ == '__main__':
         # print(g2.graph)
     # print(g2.graph)
     traversal = g2.DFS(2)
-    print(traversal)
+    print("Source: 2, "+"DFS Traversal: ", traversal)
