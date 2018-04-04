@@ -3,8 +3,8 @@
 #include "utils/image.h"
 #include "utils/timer.h"
 
-#include "composition/avtSLIVRImgMetaData.h"
-#include "composition/avtSLIVRImgCommunicator.h"
+#include "engine/avtSLIVRImgMetaData.h"
+#include "engine/avtSLIVRImgCommunicator.h"
 
 // build a binary tree compositing program step by step
 
