@@ -7,6 +7,7 @@
 #include "algorithms/visit/avtSLIVRImgCommunicator.h"
 
 // build a binary tree compositing program step by step
+#include "algorithms/Compositor.h"
 #include "algorithms/tree/common/TreeDiagram.h"
 
 #include <stdlib.h>
