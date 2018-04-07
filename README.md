@@ -1,5 +1,5 @@
-# ThreadedImageComposer
-Testing program for threaded image composition
+# WarmT Image Composer
+Testing program for our new image composition
 
 # Build
 ```
