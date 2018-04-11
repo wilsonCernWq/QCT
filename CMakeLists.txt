@@ -33,6 +33,20 @@ if (MPI_FOUND)
 
 endif()
 
+# find IceT
+find_package(IceT)
+if (IceT_FOUND)
+  add_library(icet INTERFACE IMPORTED)
+  set(ICET_LIBS "")
+  foreach(l ${ICET_CORE_LIBS} ${ICET_MPI_LIBS})
+    list(APPEND ICET_LIBS ${IceT_DIR}/lib${l}.a)
+  endforeach()
+  set_target_properties(icet PROPERTIES
+    INTERFACE_COMPILE_DEFINITIONS VISIT_ICET=1
+    INTERFACE_INCLUDE_DIRECTORIES "${ICET_INCLUDE_DIRS}"
+    INTERFACE_LINK_LIBRARIES "${ICET_LIBS}")
+endif (IceT_FOUND)
+
 # marco to build project
 macro(BUILD_ALL surfix flag)
 
@@ -49,6 +63,7 @@ macro(BUILD_ALL surfix flag)
     "${CMAKE_CURRENT_SOURCE_DIR}/algorithms/visit;"
     "${CMAKE_CURRENT_SOURCE_DIR}/utils>")
   target_link_libraries(utils_${surfix} 
+    icet 
     MPI)
   set_target_properties(utils_${surfix} 
     PROPERTIES

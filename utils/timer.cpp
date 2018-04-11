@@ -1,19 +1,40 @@
 #include "timer.h"
+#include <ctime>
+#include <sstream> // stringstream
 
 ///////////////////////////////////////////////////////////////////////////////
 // implementation
 ///////////////////////////////////////////////////////////////////////////////
 
 void Timer::Start()
-{ start_time = std::chrono::system_clock::now(); }
+{
+#ifdef PARALLEL
+  if (usempi) { mpi_start_time = MPI_Wtime(); } else
+#endif
+  {
+    start_time = std::chrono::system_clock::now(); 
+  }
+}
 
 void Timer::Stop() 
 { 
+#ifdef PARALLEL
+  if (usempi) { mpi_end_time = MPI_Wtime(); } else
+#endif
+  {
     end_time = std::chrono::system_clock::now(); 
     elapsed_seconds = end_time - start_time; 
+  }
 }
 
-double Timer::GetDuration(){ return elapsed_seconds.count(); }	
+double Timer::GetDuration() {
+#ifdef PARALLEL
+  if (usempi) { return mpi_end_time - mpi_start_time; } else
+#endif
+  {
+    return elapsed_seconds.count(); 
+  }
+}	
 
 std::string Timer::GetCurrentTime(bool shorter)
 {
