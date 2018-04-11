@@ -184,7 +184,7 @@ int main(int argc, char* argv[])
 
 	clock.Stop();
 
-	slivr::WriteArrayToPPM(outputdir + "composed", 
+	WarmT::WriteArrayToPPM(outputdir + "composed", 
 			       composedData, renderedWidth, renderedHeight);
 
         ////////////////////////////////////////////////////////////////////////

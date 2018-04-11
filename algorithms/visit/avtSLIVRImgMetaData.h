@@ -39,11 +39,55 @@
 #ifndef IMG_METADATA_H
 #define IMG_METADATA_H
 
+#include "../Compositor.h"
 #include <stdio.h>
 #include <string>
 #include <iostream>
-#include <fstream>
 #include <limits>
+#include <cmath>
+
+#define VISIT_MPI_COMM MPI_COMM_WORLD
+#define ospout std::cout
+
+// ****************************************************************************
+//  Namespace:  slivr
+//
+//  Purpose:
+//    
+//
+//  Programmer:  
+//  Creation:   
+//
+// ****************************************************************************
+namespace slivr
+{
+  inline void Exception(std::string str) {}
+  using namespace WarmT;
+  inline void CheckSectionStart(const std::string& c, 
+				const std::string& f, 
+				timestamp& start,
+				const std::string& str) 
+  {
+    WarmT::CheckSectionStart(c, f, start, str);
+  }  
+
+  inline void CheckSectionStop(const std::string& c, 
+			       const std::string& f,
+			       timestamp& start, 
+			       const std::string& str) 
+  {
+    WarmT::CheckSectionStop(c, f, start, str);
+  }
+
+  void CompositeBackground(int screen[2],
+			   int compositedImageExtents[4],
+			   int compositedImageWidth,
+			   int compositedImageHeight,
+			   float *compositedImageBuffer,
+			   unsigned char *opaqueImageColor,
+			   float         *opaqueImageDepth,
+			   unsigned char *&imgFinal);
+};
 
 // ****************************************************************************
 //  Struct:  ImgMetaData
@@ -87,44 +131,15 @@ namespace slivr
     struct ImgData
     {
 	// acts as a key
-	int procId;      // processor that produced the patch
-	int patchNumber; // id of the patch on that processor
-	float *imagePatch = NULL; // the image data - RGBA
-	bool operator==(const ImgData &a){
+	int procId;        // processor that produced the patch
+	int patchNumber;   // id of the patch on that processor
+	float *imagePatch; // the image data - RGBA
+	ImgData() { imagePatch = NULL; }
+	bool operator==(const ImgData &a) {
 	    return (patchNumber == a.patchNumber);
 	}
     };
 }
-
-// ****************************************************************************
-//  Struct:  convexHull
-//
-//  Purpose:
-//    Holds the image data generated
-//
-//  Programmer:  
-//  Creation:    
-//
-// ****************************************************************************
-namespace slivr 
-{
-    struct ConvexHull
-    {
-	int numPatches;
-	// [0] rows along x axis, [1] rows along y axis, [2] rows along z axis
-	int arrangement[3];
-	float extents[6];       // minX, maxX   minY, maxY   minZ, maxZ
-	float cellDims[3];      // x, y, z
-	float tolerance;  
-	// amount of overlap that is considered ok
-	// -- typically 2 cells for cell centered data
-	// 0: no overlap  
-	// 1: overlpa in Z 
-	// 2: overlap in Y
-	// 3: overlap in Z
-	int Overlap(ConvexHull);
-    };
-};
 
 // ****************************************************************************
 //  Template:  
@@ -136,38 +151,25 @@ namespace slivr
 //  Creation:    
 //
 // ****************************************************************************
-namespace slivr
-{
+#define CLAMP(x, l, h) (x > l ? x < h ? x : h : l)
+#define M_MIN(x, r) (x < r ? x : r)
+#define M_MAX(x, r) (x > r ? x : r)
 
-    template<typename T>
-    T Clamp(T value, T vmin, T vmax)
-    { return std::max(std::min(value, vmax), vmin); }
-
-    template<typename T>
-    T Clamp(T x)
-    { return std::min(std::max(x, (T)0.0), (T)1.0); }
-
-    inline void WriteArrayToPPM(std::string filename , float *image, int dimX, int dimY)
-    {
-	std::ofstream outputFile((filename + ".ppm").c_str(), 
-				 std::ios::out | std::ios::binary);
-	outputFile <<  "P6\n" << dimX << "\n" << dimY << "\n" << 255 << "\n"; 
-	for (int y=0; y<dimY; ++y)
-	{
-	    for (int x=0; x<dimX; ++x)
-	    {
-		int index = (y * dimX + x)*4;
-		char color[3];
-		float alpha = image[index + 3];
-		color[0] = std::max(std::min(image[index + 0]*alpha, 1.0f), 0.0f) * 255;  // red
-		color[1] = std::max(std::min(image[index + 1]*alpha, 1.0f), 0.0f) * 255;  // green
-		color[2] = std::max(std::min(image[index + 2]*alpha, 1.0f), 0.0f) * 255;  // blue
-		outputFile.write(color,3);
-	    }
-	} 
-	outputFile.close();
-    }
-
-};
+// ****************************************************************************
+//  Function:  
+//
+//  Purpose:
+//    
+//
+//  Programmer:  
+//  Creation:    
+//
+// ****************************************************************************
+void WriteArrayToPPM
+(std::string filename, float *image, int dimX, int dimY);
+void WriteArrayToPPM
+(std::string filename, unsigned char *image, int dimX, int dimY);
+void WriteArrayGrayToPPM
+(std::string filename , float * image, int dimX, int dimY);
 
 #endif//IMG_METADATA_H
