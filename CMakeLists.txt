@@ -1,6 +1,7 @@
 # setup cmake
 cmake_minimum_required (VERSION 3.5)
 project (HotT)
+add_definitions(-std=c++1z) # cmake 3.5 does not support c17
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG")
 
 # find TBB 
@@ -51,7 +52,6 @@ macro(BUILD_ALL surfix flag)
     MPI)
   set_target_properties(utils_${surfix} 
     PROPERTIES
-    CXX_STANDARD 11
     COMPILE_FLAGS "${flag}")
 
   # main program
@@ -61,7 +61,6 @@ macro(BUILD_ALL surfix flag)
     MPI)
   set_target_properties(composer_${surfix} 
     PROPERTIES
-    CXX_STANDARD 11
     COMPILE_FLAGS "${flag}")
 
 endmacro()

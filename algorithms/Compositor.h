@@ -5,10 +5,8 @@
 #pragma once
 
 #include <iostream>
-#include <fstream>
 #include <cmath>
 #include <array>
-#include <chrono>
 
 #define TILE_SIZE 32
 
@@ -67,51 +65,5 @@ namespace WarmT {
     //! end frame
     virtual void EndFrame() = 0;
   };
-
-  /*! helper functions */
-  typedef std::chrono::time_point<std::chrono::high_resolution_clock> 
-    timestamp; 
-  inline void CheckSectionStart(const std::string& c, 
-				const std::string& f, 
-				timestamp& start,
-				const std::string& str) 
-  {
-    std::cout << c << "::" << f << " " << str << " Start" << std::endl;
-    start = std::chrono::high_resolution_clock::now();
-  }  
-  inline void CheckSectionStop(const std::string& c, 
-			       const std::string& f,
-			       timestamp& start, 
-			       const std::string& str) 
-  {
-    timestamp end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff = end - start;
-    std::cout << c << "::" << f << " " << str << " Done " 
-	      << "took " << diff.count() << " s" << std::endl;
-  }
-
-#define _CLAMP(x, l, h) (x > l ? x < h ? x : h : l)
-
-  inline void WriteArrayToPPM(std::string filename, float *image, 
-			      int dimX, int dimY)
-  {
-    std::ofstream outputFile((filename+ ".ppm").c_str(), 
-			     std::ios::out | std::ios::binary);
-    outputFile <<  "P6\n" << dimX << "\n" << dimY << "\n" << 255 << "\n"; 
-    for (int y=dimY-1; y>=0; --y)
-    {
-        for (int x=0; x<dimX; ++x)
-        {
-            int index = (y * dimX + x)*4;
-            char color[3];
-            float alpha = image[index + 3];
-            color[0] = _CLAMP(image[index + 0]*alpha, 0.0f, 1.0f) * 255;
-            color[1] = _CLAMP(image[index + 1]*alpha, 0.0f, 1.0f) * 255;
-            color[2] = _CLAMP(image[index + 2]*alpha, 0.0f, 1.0f) * 255;
-            outputFile.write(color,3);
-        }
-    } 
-    outputFile.close();
-  }
 
 };

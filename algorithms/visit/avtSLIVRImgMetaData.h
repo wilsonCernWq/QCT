@@ -39,7 +39,7 @@
 #ifndef IMG_METADATA_H
 #define IMG_METADATA_H
 
-#include "../Compositor.h"
+#include <chrono>
 #include <stdio.h>
 #include <string>
 #include <iostream>
@@ -62,21 +62,29 @@
 namespace slivr
 {
   inline void Exception(std::string str) {}
-  using namespace WarmT;
+  /*! helper functions */
+  typedef std::chrono::time_point<std::chrono::high_resolution_clock> 
+    timestamp; 
+  
+
   inline void CheckSectionStart(const std::string& c, 
 				const std::string& f, 
-				timestamp& start,
+				slivr::timestamp& start,
 				const std::string& str) 
   {
-    WarmT::CheckSectionStart(c, f, start, str);
+    std::cout << c << "::" << f << " " << str << " Start" << std::endl;
+    start = std::chrono::high_resolution_clock::now();
   }  
 
   inline void CheckSectionStop(const std::string& c, 
 			       const std::string& f,
-			       timestamp& start, 
+			       slivr::timestamp& start, 
 			       const std::string& str) 
   {
-    WarmT::CheckSectionStop(c, f, start, str);
+    timestamp end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double> diff = end - start;
+    std::cout << c << "::" << f << " " << str << " Done " 
+	      << "took " << diff.count() << " s" << std::endl;
   }
 
   void CompositeBackground(int screen[2],
@@ -171,5 +179,4 @@ void WriteArrayToPPM
 (std::string filename, unsigned char *image, int dimX, int dimY);
 void WriteArrayGrayToPPM
 (std::string filename , float * image, int dimX, int dimY);
-
 #endif//IMG_METADATA_H

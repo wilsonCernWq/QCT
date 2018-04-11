@@ -1,3 +1,4 @@
+#include "utils/commandline.h"
 #include "utils/utilities.h"
 #include "utils/color.h"
 #include "utils/image.h"
@@ -10,10 +11,11 @@
 #include "algorithms/Compositor.h"
 #include "algorithms/tree/common/TreeDiagram.h"
 
-#include <stdlib.h>
+#include <cstdlib>
 #include <unistd.h>
 #include <string>
 #include <vector>
+
 #include <mpi.h>
 
 std::string outputdir = "./";
@@ -25,9 +27,9 @@ bool sortImgMetaDataByEyeSpaceDepth(slivr::ImgMetaData const& before,
 				    slivr::ImgMetaData const& after)
 { return before.eye_z > after.eye_z; }
 
-inline void InitImage
+void InitImage
 (int minX, int maxX, int minY, int maxY, 
- int myRank, Image &img, int idx, bool randSizeImg)
+ int mpiRank, Image &img, int idx, bool randSizeImg)
 {
     int dimsX = maxX - minX;
     int dimsY = maxY - minY;
@@ -59,18 +61,6 @@ inline void InitImage
     }
     img.SetDepth(depth);
     clock.Stop();
-    // std::cout << "spent " << clock.GetDuration() 
-    // 	      << " seconds to create subimage " 
-    // 	      << "position " 
-    // 	      << rminX << " " << rmaxX << " " 
-    // 	      << rminY << " " << rmaxY << " "
-    // 	      << "color " 
-    // 	      << color.r << " " << color.g << " " << color.b << " " << color.a
-    // 	      << std::endl;
-    // img.OutputPPM(outputdir + 
-    // 		  "rank-" + 
-    //               std::to_string(myRank) + 
-    // 		  "-idx-" + std::to_string(idx) + ".ppm");
 }
 
 // Arguments:
@@ -83,21 +73,23 @@ int main(int argc, char* argv[])
     int width  = (argc > 1) ? atoi(argv[1]) : 716 - 34;
     int height = (argc > 2) ? atoi(argv[2]) : 453 - 237;
     bool randSizeImg = (argc > 3) ? atoi(argv[4]) == 0 : true;
-    int fullImageExtents[4] = {0, width, 0, height};
     std::cout << "width " << width << " height " << height << std::endl;
 
     // MPI stuff
-    int myRank, numProcs;
+    int mpiRank, mpiSize;
     MPI_Init(NULL, NULL);
-    MPI_Comm_rank(MPI_COMM_WORLD, &myRank);
-    MPI_Comm_size(MPI_COMM_WORLD, &numProcs);
+    MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+    MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
     int  hostnamelen;
     char hostname[512];
     MPI_Get_processor_name(hostname, &hostnamelen);
+
+    // 
     avtSLIVRImgCommunicator imgComm;
+    int fullImageExtents[4] = {0, width, 0, height};
 
     // random seed
-    srand((myRank+1)*25);
+    srand((mpiRank+1)*25);
     
     // image composer
     Timer clock;
@@ -108,14 +100,14 @@ int main(int argc, char* argv[])
     const int maxY = height;
 
     // random image
-    if (numProcs == 1) {
+    if (mpiSize == 1) {
 
 	int numPatches = 800;
 	std::vector<Image> imgList(numPatches);
 	// randomly create images
 	for (int i = 0; i < numPatches; ++i) {
 	    InitImage(minX, maxX, minY, maxY, 
-		      myRank, imgList[i], i, randSizeImg);
+		      mpiRank, imgList[i], i, randSizeImg);
 	}
 	// composition
 	clock.Start();
@@ -132,7 +124,7 @@ int main(int argc, char* argv[])
 	for (int i=0; i<numPatches; i++)
 	{
 	    slivr::ImgMetaData currMeta;
-	    currMeta.procId = myRank;
+	    currMeta.procId = mpiRank;
 	    currMeta.patchNumber = i;
 	    currMeta.destProcId = 0;
 	    currMeta.inUse = 1;
@@ -184,8 +176,7 @@ int main(int argc, char* argv[])
 
 	clock.Stop();
 
-	WarmT::WriteArrayToPPM(outputdir + "composed", 
-			       composedData, renderedWidth, renderedHeight);
+	CreatePPM(composedData, renderedWidth, renderedHeight, outputdir + "composed");
 
         ////////////////////////////////////////////////////////////////////////
 	
@@ -194,8 +185,52 @@ int main(int argc, char* argv[])
 		  << " seconds to finish" << std::endl;
     } 
     else {
+
+      int numPatches = 1;      
+      if (imgComm.IceTValid() && numPatches == 1) {
+	// Image img;
+	// // randomly create images
+	// InitImage(minX, maxX, minY, maxY, 
+	// 	  mpiRank, img, i, randSizeImg);
+	// MPI_Barrier();
+
+	// // composition
+	// if (mpiRank == 0) {
+	//   clock.Start();
+	// }
+
+	// // First Composition
+	// size_t compositedW = fullImageExtents[1] - fullImageExtents[0];
+	// size_t compositedH = fullImageExtents[3] - fullImageExtents[2];
+	// compositedExtents[0] = fullImageExtents[0];
+	// compositedExtents[1] = fullImageExtents[1];
+	// compositedExtents[2] = fullImageExtents[2];
+	// compositedExtents[3] = fullImageExtents[3];
+	// if (PAR_Rank() == 0) {
+	//   compositedData = 
+	//     new float[4 * compositedW * compositedH]();
+	// }
+	// int currExtents[4] = 
+	//   {std::max(currMeta.screen_ll[0]-fullImageExtents[0], 0), 
+	//    std::min(currMeta.screen_ur[0]-fullImageExtents[0], 
+	// 	    compositedW), 
+	//    std::max(currMeta.screen_ll[1]-fullImageExtents[2], 0),
+	//    std::min(currMeta.screen_ur[1]-fullImageExtents[2],
+	// 	    compositedH)};
+	// imgComm.IceTInit(compositedW, compositedH);
+	// imgComm.IceTSetTile(currData.imagePatch, 
+	// 		    currExtents,
+	// 		    currMeta.eye_z);
+	// imgComm.IceTComposite(compositedData);
+	// if (currData.imagePatch != NULL) {
+	//   delete[] currData.imagePatch;
+	//   currData.imagePatch = NULL;
+	// }
+
+      }
+      else {
 	std::cout << "[Multiple Node] Not Implemented" << std::endl;
-      
+      }
     }
 
     MPI_Finalize();
