@@ -46,6 +46,8 @@
 #include <limits>
 #include <cmath>
 
+#include <mpi.h>
+
 #define VISIT_MPI_COMM MPI_COMM_WORLD
 #define ospout std::cout
 
@@ -72,7 +74,12 @@ namespace slivr
 				slivr::timestamp& start,
 				const std::string& str) 
   {
-    std::cout << c << "::" << f << " " << str << " Start" << std::endl;
+    int rank, size;
+    MPI_Comm_rank(VISIT_MPI_COMM, &rank);
+    MPI_Comm_size(VISIT_MPI_COMM, &size);
+    if (size == 0) {
+      std::cout << c << "::" << f << " " << str << " Start" << std::endl;
+    }
     start = std::chrono::high_resolution_clock::now();
   }  
 
@@ -82,9 +89,14 @@ namespace slivr
 			       const std::string& str) 
   {
     timestamp end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double> diff = end - start;
-    std::cout << c << "::" << f << " " << str << " Done " 
-	      << "took " << diff.count() << " s" << std::endl;
+    int rank, size;
+    MPI_Comm_rank(VISIT_MPI_COMM, &rank);
+    MPI_Comm_size(VISIT_MPI_COMM, &size);
+    if (size == 0) {
+      std::chrono::duration<double> diff = end - start;
+      std::cout << c << "::" << f << " " << str << " Done " 
+		<< "took " << diff.count() << " s" << std::endl;
+    }
   }
 
   void CompositeBackground(int screen[2],
