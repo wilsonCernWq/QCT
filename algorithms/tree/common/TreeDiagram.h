@@ -41,8 +41,9 @@ namespace WarmT {
    *  index, this node should be a root node.
    */
   struct TreeDiagram_Array {
+  public:
     struct Node {
-      int32_t target;
+      int32_t target; /* send/recv target */
       int32_t index;
       bool IsSend() const { return index == -1; }
       bool IsRecv() const { return !IsSend();   }    
@@ -89,6 +90,7 @@ namespace WarmT {
       if (list[i].IsSend()) { return false; }
       else { i = static_cast<NodeRef>(list[i].index); return true; }
     }
+
     /*! building the graph */
     void SetNode(const NodeRef i, const int32_t target, const int32_t index) {
       CheckIndex(i);
