@@ -7,42 +7,49 @@
 #include <iostream>
 #include <cmath>
 #include <array>
+#include "common/error.h"
 
-#define TILE_SIZE 32
+#define WARMT_TILE_SHARED        1 << 0
+#define WARMT_TILE_REDUCED_DEPTH 1 << 1
 
 namespace WarmT {
-
-  struct Tile {
+  
+  class Tile {
+  public:
+    /*! we select this tile format because we want to eventually port our 
+     *  library into ospray
+     */
     // 'red' component; in float.
-    float r[TILE_SIZE*TILE_SIZE];
+    float *r;
     // 'green' component; in float.
-    float g[TILE_SIZE*TILE_SIZE];
+    float *g;
     // 'blue' component; in float.
-    float b[TILE_SIZE*TILE_SIZE];
+    float *b;
     // 'alpha' component; in float.
-    float a[TILE_SIZE*TILE_SIZE];
+    float *a;
     // 'depth' component; in float.
-    float z[TILE_SIZE*TILE_SIZE];
+    float *z;
     /*!< screen region that this tile corresponds to */
-    std::array<int32_t, 4>  region;
+    std::array<uint32_t, 4> region;
     /*!< total frame buffer size, for the camera */ 
     std::array<uint32_t, 2> fbSize;
-    std::array<float, 2>    rcp_fbSize;
+    /*!< tile size */ 
+    std::array<uint32_t, 2> tileDim;
+    uint32_t tileSize;
  
     Tile() = default;
-    Tile(const std::array<int32_t, 2>  &tid, 
-	 const std::array<uint32_t, 2> &size)
-    : fbSize{size[0], size[1]},
-      rcp_fbSize{1.f / static_cast<float>(size[0]),
-	         1.f / static_cast<float>(size[1])}
-    {
-      region[0] = tid[0] * TILE_SIZE;
-      region[1] = tid[1] * TILE_SIZE;
-      region[2] = std::min(region[0] + TILE_SIZE, 
-			   static_cast<int32_t>(fbSize[0]));
-      region[3] = std::min(region[1] + TILE_SIZE, 
-			   static_cast<int32_t>(fbSize[1]));
-    }
+    Tile(const std::array<uint32_t, 4> &region, 
+	 const std::array<uint32_t, 2> &fbSize,
+	 float* rptr, float* gptr, float* bptr, float* aptr,
+	 float* depth, 
+	 const uint32_t flag);
+    Tile(const std::array<uint32_t, 4> &region, 
+	 const std::array<uint32_t, 2> &fbSize,
+	 float* rgba, float* depth, 
+	 const uint32_t flag);
+
+  private:
+    void SetDepth(float* depth, const uint32_t flag);
   };
 
   /*! Abstract API for image compositing */  

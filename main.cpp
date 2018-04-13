@@ -4,6 +4,7 @@
 #include "utils/image.h"
 #include "utils/timer.h"
 
+#include "algorithms/visit/CompositorVisIt.h"
 #include "algorithms/visit/avtSLIVRImgMetaData.h"
 #include "algorithms/visit/avtSLIVRImgCommunicator.h"
 
