@@ -12,8 +12,9 @@
 #include "algorithms/Compositor.h"
 #include "algorithms/tree/common/TreeDiagram.h"
 
-#include <cstdlib>
 #include <unistd.h>
+#include <cstdlib>
+#include <ctime>
 #include <string>
 #include <vector>
 
@@ -94,7 +95,7 @@ int main(const int ac, const char* av[])
   MPI_Get_processor_name(hostname, &hostnamelen);
 
   // random seed
-  srand((mpiRank+1)*25);
+  srand((mpiRank+1)*25*time(NULL));
 
   // Timer
   Timer clock;
@@ -113,7 +114,7 @@ int main(const int ac, const char* av[])
   WarmT::Compositor_VisIt visit(WarmT::Compositor_VisIt::ICET,
 				CMD::width, CMD::height);
 
-  if (mpiSize == 1 && false) {
+  if (mpiSize == 1) {
 
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
@@ -226,6 +227,7 @@ int main(const int ac, const char* av[])
     else {
       std::cout << "[Multiple Node] Not Implemented" << std::endl;
     }
+
   }
   
   MPI_Finalize();

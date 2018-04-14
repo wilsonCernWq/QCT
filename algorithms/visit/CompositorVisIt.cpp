@@ -21,7 +21,7 @@ namespace WarmT {
 
   Compositor_VisIt::~Compositor_VisIt() {
     if (mpiRank == 0) {
-      //if (rgba) delete[] rgba;
+      if (rgba) delete[] rgba;
     }
     delete imgComm;
   };
