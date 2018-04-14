@@ -30,7 +30,7 @@ namespace WarmT {
     /*!< register flag */
     uint32_t flag{0};
     /*!< screen region that this tile corresponds to */
-    std::array<uint32_t, 4> region;
+    std::array<uint32_t, 4> region; /* x0 y0 x1 y1 */
     /*!< total frame buffer size, for the camera */ 
     std::array<uint32_t, 2> fbSize;
     /*!< tile size */ 

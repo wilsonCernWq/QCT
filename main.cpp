@@ -111,10 +111,7 @@ int main(const int ac, const char* av[])
   }
   
   // random image
-  WarmT::Compositor_VisIt visit(WarmT::Compositor_VisIt::ICET,
-				CMD::width, CMD::height);
-
-  if (mpiSize == 1) {
+  if (mpiSize == 1 && false) {
 
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
@@ -129,16 +126,16 @@ int main(const int ac, const char* av[])
     std::vector<slivr::ImgData>     allPatchData;
     for (int i=0; i<numPatches; i++) {
 
-      float depth = imgList[i].GetDepth();
-      WarmT::Tile tile(imgList[i].GetExtents(0),
-		       imgList[i].GetExtents(2),
-		       imgList[i].GetExtents(1),
-		       imgList[i].GetExtents(3),
-		       width,
-		       height,
-		       imgList[i].GetData(),
-		       &depth,
-		       WARMT_TILE_REDUCED_DEPTH);
+      // float depth = imgList[i].GetDepth();
+      // WarmT::Tile tile(imgList[i].GetExtents(0),
+      // 		       imgList[i].GetExtents(2),
+      // 		       imgList[i].GetExtents(1),
+      // 		       imgList[i].GetExtents(3),
+      // 		       width,
+      // 		       height,
+      // 		       imgList[i].GetData(),
+      // 		       &depth,
+      // 		       WARMT_TILE_REDUCED_DEPTH);
 
       slivr::ImgMetaData currMeta;
       currMeta.procId = mpiRank;
@@ -189,7 +186,7 @@ int main(const int ac, const char* av[])
     // Finalize
     clock.Stop();
     ////////////////////////////////////////////////////////////////////////
-    CreatePPM(composedData, renderedWidth, renderedHeight, outputdir + "composed.ppm");   
+    CreatePPM(composedData, renderedWidth, renderedHeight, outputdir + "image.ppm");   
     std::cout << "[Single Node (VisIt method)] " << clock.GetDuration() 
 	      << " seconds to finish" << std::endl;
     ////////////////////////////////////////////////////////////////////////    
@@ -201,6 +198,8 @@ int main(const int ac, const char* av[])
     // Using VisIt Method
     ////////////////////////////////////////////////////////////////////////    
     clock.Start();
+    WarmT::Compositor_VisIt visit(WarmT::Compositor_VisIt::ICET,
+				  CMD::width, CMD::height);
     if (visit.IsValid() && numPatches == 1) {
       /* porting the code into our API */
       float depth = imgList[0].GetDepth();
@@ -219,7 +218,7 @@ int main(const int ac, const char* av[])
       clock.Stop();
       ////////////////////////////////////////////////////////////////////////
       CreatePPM((float*)visit.MapColorBuffer(), 
-		width, height, outputdir + "composed.ppm");
+		width, height, outputdir + "image.ppm");
       std::cout << "[Multiple Node (VisIt method)] " << clock.GetDuration() 
 		<< " seconds to finish" << std::endl;
       ////////////////////////////////////////////////////////////////////////    
