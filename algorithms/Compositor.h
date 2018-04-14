@@ -14,8 +14,8 @@
 
 #include "common/error.h"
 
-#define WARMT_TILE_SHARED        1 << 0
-#define WARMT_TILE_REDUCED_DEPTH 1 << 1
+#define WARMT_TILE_SHARED        (1 << 0)
+#define WARMT_TILE_REDUCED_DEPTH (1 << 1)
 
 namespace WarmT {
   
@@ -54,17 +54,17 @@ namespace WarmT {
 	 const std::array<uint32_t, 2> &fbSize,
 	 float* rptr, float* gptr, float* bptr, float* aptr,
 	 float* depth, 
-	 const uint32_t flag);
+	 const uint32_t flag = 0);
 
     Tile(const std::array<uint32_t, 4> &region, 
 	 const std::array<uint32_t, 2> &fbSize,
 	 float* rgba, float* depth, 
-	 const uint32_t flag);
+	 const uint32_t flag = 0);
 
     Tile(const uint32_t* region, 
 	 const uint32_t* fbSize,
 	 float* rptr, float* gptr, float* bptr, float* aptr,
-	 float* depth, const uint32_t flag) 
+	 float* depth, const uint32_t flag = 0) 
       : Tile(arr4u{region[0], region[1], region[2], region[3]},
 	     arr2u{fbSize[0], fbSize[1]},
 	     rptr, gptr, bptr, aptr, depth, flag)
@@ -73,7 +73,7 @@ namespace WarmT {
     Tile(const uint32_t* region, 
 	 const uint32_t* fbSize,
 	 float* rgba, float* depth, 
-	 const uint32_t flag)
+	 const uint32_t flag = 0)
       : Tile(arr4u{region[0], region[1], region[2], region[3]},
 	     arr2u{fbSize[0], fbSize[1]},
 	     rgba, depth, flag)
@@ -83,7 +83,7 @@ namespace WarmT {
 	 const uint32_t& r2, const uint32_t& r3,
 	 const uint32_t& f0, const uint32_t& f1,
 	 float* rgba, float* d, 
-	 const uint32_t flag)
+	 const uint32_t flag = 0)
       : Tile(arr4u{r0, r1, r2, r3}, arr2u{f0, f1}, rgba, d, flag)
       {}
 
@@ -91,7 +91,7 @@ namespace WarmT {
     Tile(const std::array<uint32_t, 4> &region, 
 	 const std::array<uint32_t, 2> &fbSize,
 	 const uint32_t flag);
-    void SetDepth(float* depth, const uint32_t flag);
+    void SetDepth(float* depth, const uint32_t flag = 0);
   };
 
   /*! Abstract API for image compositing */  

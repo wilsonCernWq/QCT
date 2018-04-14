@@ -110,6 +110,9 @@ int main(const int ac, const char* av[])
   }
   
   // random image
+  WarmT::Compositor_VisIt visit(WarmT::Compositor_VisIt::ICET,
+				CMD::width, CMD::height);
+
   if (mpiSize == 1 && false) {
 
     ////////////////////////////////////////////////////////////////////////
@@ -124,6 +127,18 @@ int main(const int ac, const char* av[])
     std::vector<slivr::ImgMetaData> allPatchMeta;
     std::vector<slivr::ImgData>     allPatchData;
     for (int i=0; i<numPatches; i++) {
+
+      float depth = imgList[i].GetDepth();
+      WarmT::Tile tile(imgList[i].GetExtents(0),
+		       imgList[i].GetExtents(2),
+		       imgList[i].GetExtents(1),
+		       imgList[i].GetExtents(3),
+		       width,
+		       height,
+		       imgList[i].GetData(),
+		       &depth,
+		       WARMT_TILE_REDUCED_DEPTH);
+
       slivr::ImgMetaData currMeta;
       currMeta.procId = mpiRank;
       currMeta.patchNumber = i;
@@ -144,6 +159,7 @@ int main(const int ac, const char* av[])
 	      [](slivr::ImgMetaData const& before,
 		 slivr::ImgMetaData const& after)
 	      { return before.eye_z > after.eye_z; });
+
     // Blend images
     int renderedWidth  = fullImageExtents[1] - fullImageExtents[0];
     int renderedHeight = fullImageExtents[3] - fullImageExtents[2];
@@ -184,10 +200,7 @@ int main(const int ac, const char* av[])
     // Using VisIt Method
     ////////////////////////////////////////////////////////////////////////    
     clock.Start();
-    WarmT::Compositor_VisIt visit(WarmT::Compositor_VisIt::ICET,
-				  width, height);
     if (visit.IsValid() && numPatches == 1) {
-
       /* porting the code into our API */
       float depth = imgList[0].GetDepth();
       WarmT::Tile tile(imgList[0].GetExtents(0),
@@ -198,56 +211,14 @@ int main(const int ac, const char* av[])
 		       height,
 		       imgList[0].GetData(),
 		       &depth,
-		       WARMT_TILE_REDUCED_DEPTH | 
-		       WARMT_TILE_SHARED);
-      /* PORTING the code into our API */
-
-      // slivr::ImgMetaData currMeta;
-      // slivr::ImgData     currData;
-      // currMeta.procId = mpiRank;
-      // currMeta.patchNumber = 0;
-      // currMeta.destProcId = 0;
-      // currMeta.inUse = 1;
-      // currMeta.dims[0] = imgList[0].GetWidth();
-      // currMeta.dims[1] = imgList[0].GetHeight();
-      // currMeta.screen_ll[0] = imgList[0].GetExtents(0);
-      // currMeta.screen_ll[1] = imgList[0].GetExtents(2);
-      // currMeta.screen_ur[0] = imgList[0].GetExtents(1);
-      // currMeta.screen_ur[1] = imgList[0].GetExtents(3);
-      // currMeta.avg_z = imgList[0].GetDepth();
-      // currMeta.eye_z = imgList[0].GetDepth();
-      // // First Composition
-      // int compositedW = fullImageExtents[1] - fullImageExtents[0];
-      // int compositedH = fullImageExtents[3] - fullImageExtents[2];
-      //float *compositedData = NULL;
-      //if (mpiRank == 0) {
-      //  compositedData = new float[4 * compositedW * compositedH]();
-      //}
-      // int currExtents[4] = 
-      // 	{std::max(currMeta.screen_ll[0]-fullImageExtents[0], 0), 
-      // 	 std::min(currMeta.screen_ur[0]-fullImageExtents[0], 
-      // 		  compositedW), 
-      // 	 std::max(currMeta.screen_ll[1]-fullImageExtents[2], 0),
-      // 	 std::min(currMeta.screen_ur[1]-fullImageExtents[2],
-      // 		  compositedH)};
-      //imgComm.IceTInit(compositedW, compositedH);
-      //imgComm.IceTSetTile(imgList[0].GetData(), 
-      // 			  currExtents,
-      // 			  currMeta.eye_z);
-      // imgComm.IceTComposite(compositedData);
-      // if (currData.imagePatch != NULL) {
-      // 	delete[] currData.imagePatch;
-      // 	currData.imagePatch = NULL;
-      // }     
-      // Finalize
+		       WARMT_TILE_REDUCED_DEPTH);
       visit.BeginFrame();
       visit.SetTile(tile);
       visit.EndFrame();
       clock.Stop();
       ////////////////////////////////////////////////////////////////////////
       CreatePPM((float*)visit.MapColorBuffer(), 
-		width, height,
-		outputdir + "composed.ppm");
+		width, height, outputdir + "composed.ppm");
       std::cout << "[Multiple Node (VisIt method)] " << clock.GetDuration() 
 		<< " seconds to finish" << std::endl;
       ////////////////////////////////////////////////////////////////////////    

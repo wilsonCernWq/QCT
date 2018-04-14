@@ -3,7 +3,7 @@
 #include "avtSLIVRImgMetaData.h"
 #include "avtSLIVRImgCommunicator.h"
 
-static avtSLIVRImgCommunicator imgComm;
+static avtSLIVRImgCommunicator* imgComm;
 static float* IceT_tile_buffer = nullptr;
 
 namespace WarmT {
@@ -15,26 +15,28 @@ namespace WarmT {
   {
     if (mpiRank == 0) {
       rgba = new float[4 * W * H]();
-    }    
+    }
+    imgComm = new avtSLIVRImgCommunicator();
   };
 
   Compositor_VisIt::~Compositor_VisIt() {
     if (mpiRank == 0) {
-      if (rgba) delete[] rgba;
+      //if (rgba) delete[] rgba;
     }
+    delete imgComm;
   };
 
   //! status
   bool Compositor_VisIt::IsValid() {
     switch (mode) {
     case(ICET):
-      return imgComm.IceTValid();
+      return imgComm->IceTValid();
     }
   }
 
   //! function to get final results
-  const void *Compositor_VisIt::MapDepthBuffer() { return rgba; };
-  const void *Compositor_VisIt::MapColorBuffer() { return depth; };
+  const void *Compositor_VisIt::MapDepthBuffer() { return depth; };
+  const void *Compositor_VisIt::MapColorBuffer() { return rgba; };
   void Compositor_VisIt::Unmap(const void *mappedMem) { mappedMem = nullptr; };
 
   //! upload tile
@@ -51,12 +53,11 @@ namespace WarmT {
 	IceT_tile_buffer[4 * i + 1] = tile.g[i];
 	IceT_tile_buffer[4 * i + 2] = tile.b[i];
 	IceT_tile_buffer[4 * i + 3] = tile.a[i];
-      }
-      
+      }      
       int e[4] = {tile.region[0], tile.region[1],
 		  tile.region[2], tile.region[3]};       
-      imgComm.IceTSetTile(IceT_tile_buffer, e,
-			  *(tile.z));
+      imgComm->IceTSetTile(IceT_tile_buffer, e,
+			   *(tile.z));
       break;
     }
   };
@@ -74,7 +75,7 @@ namespace WarmT {
   void Compositor_VisIt::BeginFrame() {
     switch (mode) {
     case(ICET):
-      imgComm.IceTInit(W, H);
+      imgComm->IceTInit(W, H);
       break;
     }
   };
@@ -83,7 +84,7 @@ namespace WarmT {
   void Compositor_VisIt::EndFrame() {
     switch (mode) {
     case(ICET):
-      imgComm.IceTComposite(rgba);
+      imgComm->IceTComposite(rgba);
     }    
   };
 };
