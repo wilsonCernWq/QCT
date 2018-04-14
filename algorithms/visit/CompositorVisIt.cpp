@@ -9,6 +9,8 @@ static avtSLIVRImgCommunicator* imgComm;
 static std::vector<float*> tileBufferList;
 
 namespace WarmT {
+namespace algorithms {
+namespace visit {            
     
     Compositor_VisIt::Compositor_VisIt(const Mode& m,
                                        const uint32_t& width,
@@ -95,4 +97,6 @@ namespace WarmT {
         }
     };
 
+};
+};
 };

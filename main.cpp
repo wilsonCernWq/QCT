@@ -42,16 +42,14 @@ void InitImage(int minX, int maxX, int minY, int maxY, int mpiRank,
   // create image
   Timer clock;
   clock.Start();
-  if (randomSizedImage) // random sized images
-    {
-      img.CreateImage(rminX, rmaxX, rminY, rmaxY);
-      img.ColorImage(color);
-    }
-  else // full sized images with bounding box
-    {
-      img.CreateImage(maxX, maxY, rminX, rmaxX, rminY, rmaxY);
-      img.ColorImage(color, rminX, rmaxX, rminY, rmaxY);
-    }
+  if (randomSizedImage) { // random sized images    
+    img.CreateImage(rminX, rmaxX, rminY, rmaxY);
+    img.ColorImage(color);
+  }
+  else { // full sized images with bounding box    
+    img.CreateImage(maxX, maxY, rminX, rmaxX, rminY, rmaxY);
+    img.ColorImage(color, rminX, rmaxX, rminY, rmaxY);
+  }
   img.SetDepth(depth);
   clock.Stop();
 }
@@ -115,8 +113,9 @@ int main(const int ac, const char* av[])
 
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
-    WarmT::Compositor_VisIt visit(WarmT::Compositor_VisIt::ONENODE,
-                                  CMD::width, CMD::height);  
+    WarmT::algorithms::visit::Compositor_VisIt
+      visit(WarmT::algorithms::visit::Compositor_VisIt::ONENODE,
+            CMD::width, CMD::height);  
     clock.Start(); 
     visit.BeginFrame();
     for (int i=0; i<numPatches; i++) {
@@ -149,8 +148,9 @@ int main(const int ac, const char* av[])
 
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
-    WarmT::Compositor_VisIt visit(WarmT::Compositor_VisIt::ICET,
-                                  CMD::width, CMD::height);  
+    WarmT::algorithms::visit::Compositor_VisIt
+      visit(WarmT::algorithms::visit::Compositor_VisIt::ICET, 
+            CMD::width, CMD::height);  
     if (visit.IsValid() && numPatches == 1) {
       clock.Start();
       /* porting the code into our API */
