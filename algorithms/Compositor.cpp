@@ -1,16 +1,22 @@
 #include "Compositor.h"
 
 namespace WarmT {
-  
+
   Tile::Tile(const std::array<uint32_t, 4> &region, 
-	     const std::array<uint32_t, 2> &fbSize,
-	     float* rptr, float* gptr, float* bptr, float* aptr,
-	     float* depth, const uint32_t flag)
+	     const std::array<uint32_t, 2> &fbSize)
     : region (region), fbSize (fbSize)
   {
     tileDim[0] = region[2]-region[0];
     tileDim[1] = region[3]-region[1];
     tileSize = tileDim[0] * tileDim[1];	
+  }
+  
+  Tile::Tile(const std::array<uint32_t, 4> &region, 
+	     const std::array<uint32_t, 2> &fbSize,
+	     float* rptr, float* gptr, float* bptr, float* aptr,
+	     float* depth, const uint32_t flag)
+    : Tile(region, fbSize)
+  {
     /*! check if we need to do deep copy of the image data */
     if (flag & WARMT_TILE_SHARED) {
       this->r = rptr;
@@ -36,19 +42,15 @@ namespace WarmT {
   Tile::Tile(const std::array<uint32_t, 4> &region, 
 	     const std::array<uint32_t, 2> &fbSize,
 	     float* rgba, float* depth, const uint32_t flag)
-    : region(region), fbSize(fbSize)
+    : Tile(region, fbSize)
   {
-    tileDim[0] = region[2]-region[0];
-    tileDim[1] = region[3]-region[1];
-    tileSize = tileDim[0] * tileDim[1];	
-    
     /*! because we are having different data structures, we have to do deep
      *  copy here
      */
     if (flag & WARMT_TILE_SHARED) {
-      WarnOnce("the tile cannot be shared because the RGBA "
-	       "data is privided in AOS style, while SOA style "
-	       "is required");
+      Error::WarnOnce("The tile cannot be shared because the RGBA "
+		      "data is in an AOS style,\n"
+		      "\twhile a SOA style is required");
     }
     this->r = new float[tileSize];
     this->g = new float[tileSize];

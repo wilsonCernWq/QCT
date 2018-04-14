@@ -187,6 +187,21 @@ int main(const int ac, const char* av[])
     const int fullImageExtents[4] = {0, (int)width, 0, (int)height};
     clock.Start();
     if (imgComm.IceTValid() && numPatches == 1) {
+
+      /* porting the code into our API */
+      float depth = imgList[0].GetDepth();
+      WarmT::Tile tile(imgList[0].GetExtents(0),
+		       imgList[0].GetExtents(2),
+		       imgList[0].GetExtents(1),
+		       imgList[0].GetExtents(3),
+		       width,
+		       height,
+		       imgList[0].GetData(),
+		       &depth,
+		       WARMT_TILE_REDUCED_DEPTH | 
+		       WARMT_TILE_SHARED);
+      /* PORTING the code into our API */
+
       slivr::ImgMetaData currMeta;
       slivr::ImgData     currData;
       currMeta.procId = mpiRank;

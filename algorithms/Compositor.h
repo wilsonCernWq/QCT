@@ -14,6 +14,10 @@
 
 namespace WarmT {
   
+  typedef std::array<uint32_t, 2> arr2u;
+  typedef std::array<uint32_t, 3> arr3u;
+  typedef std::array<uint32_t, 4> arr4u;
+
   class Tile {
   public:
     /*! we select this tile format because we want to eventually port our 
@@ -48,7 +52,35 @@ namespace WarmT {
 	 float* rgba, float* depth, 
 	 const uint32_t flag);
 
+    Tile(const uint32_t* region, 
+	 const uint32_t* fbSize,
+	 float* rptr, float* gptr, float* bptr, float* aptr,
+	 float* depth, const uint32_t flag) 
+      : Tile(arr4u{region[0], region[1], region[2], region[3]},
+	     arr2u{fbSize[0], fbSize[1]},
+	     rptr, gptr, bptr, aptr, depth, flag)
+      {}
+
+    Tile(const uint32_t* region, 
+	 const uint32_t* fbSize,
+	 float* rgba, float* depth, 
+	 const uint32_t flag)
+      : Tile(arr4u{region[0], region[1], region[2], region[3]},
+	     arr2u{fbSize[0], fbSize[1]},
+	     rgba, depth, flag)
+      {}
+
+    Tile(const uint32_t& r0, const uint32_t& r1, 
+	 const uint32_t& r2, const uint32_t& r3,
+	 const uint32_t& f0, const uint32_t& f1,
+	 float* rgba, float* d, 
+	 const uint32_t flag)
+      : Tile(arr4u{r0, r1, r2, r3}, arr2u{f0, f1}, rgba, d, flag)
+      {}
+
   private:
+    Tile(const std::array<uint32_t, 4> &region, 
+	 const std::array<uint32_t, 2> &fbSize);
     void SetDepth(float* depth, const uint32_t flag);
   };
 
