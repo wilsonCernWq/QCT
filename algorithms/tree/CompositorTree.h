@@ -3,7 +3,7 @@
 #include "../Compositor.h"
 #include "common/TreeDiagram.h"
 
-namespace WarmT {
+namespace QCT {
 namespace algorithms {
 namespace tree {
 

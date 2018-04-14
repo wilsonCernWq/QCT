@@ -13,7 +13,7 @@
 # include <mpi.h>
 #endif
 
-namespace WarmT {  
+namespace QCT {  
   namespace algorithms {
     /*! Abstract API for image compositing */  
     class Compositor {

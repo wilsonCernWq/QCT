@@ -1,3 +1,5 @@
+/*! This is more of an example file demostrating how we should use our library 
+ */
 #include "utils/commandline.h"
 #include "utils/utilities.h"
 #include "utils/color.h"
@@ -112,23 +114,23 @@ int main(const int ac, const char* av[])
 
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
-    WarmT::algorithms::visit::Compositor_VisIt
-      visit(WarmT::algorithms::visit::Compositor_VisIt::ONENODE,
+    QCT::algorithms::visit::Compositor_VisIt
+      visit(QCT::algorithms::visit::Compositor_VisIt::ONENODE,
             CMD::width, CMD::height);  
     clock.Start(); 
     visit.BeginFrame();
     for (int i=0; i<numPatches; i++) {
       /* porting the code into our API */
       float depth = imgList[i].GetDepth();
-      WarmT::Tile tile(imgList[i].GetExtents(0),
-		       imgList[i].GetExtents(2),
-		       imgList[i].GetExtents(1),
-		       imgList[i].GetExtents(3),
-		       width,
-		       height,
-		       imgList[i].GetData(),
-		       &depth,
-		       WARMT_TILE_REDUCED_DEPTH);
+      QCT::Tile tile(imgList[i].GetExtents(0),
+                     imgList[i].GetExtents(2),
+                     imgList[i].GetExtents(1),
+                     imgList[i].GetExtents(3),
+                     width,
+                     height,
+                     imgList[i].GetData(),
+                     &depth,
+                     QCT_TILE_REDUCED_DEPTH);
       visit.SetTile(tile);
     }    
     visit.EndFrame();
@@ -147,22 +149,22 @@ int main(const int ac, const char* av[])
 
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
-    WarmT::algorithms::visit::Compositor_VisIt
-      visit(WarmT::algorithms::visit::Compositor_VisIt::ICET, 
+    QCT::algorithms::visit::Compositor_VisIt
+      visit(QCT::algorithms::visit::Compositor_VisIt::ICET, 
             CMD::width, CMD::height);  
     if (visit.IsValid() && numPatches == 1) {
       clock.Start();
       /* porting the code into our API */
       float depth = imgList[0].GetDepth();
-      WarmT::Tile tile(imgList[0].GetExtents(0),
-		       imgList[0].GetExtents(2),
-		       imgList[0].GetExtents(1),
-		       imgList[0].GetExtents(3),
-		       width,
-		       height,
-		       imgList[0].GetData(),
-		       &depth,
-		       WARMT_TILE_REDUCED_DEPTH);
+      QCT::Tile tile(imgList[0].GetExtents(0),
+                     imgList[0].GetExtents(2),
+                     imgList[0].GetExtents(1),
+                     imgList[0].GetExtents(3),
+                     width,
+                     height,
+                     imgList[0].GetData(),
+                     &depth,
+                     QCT_TILE_REDUCED_DEPTH);
       visit.BeginFrame();
       visit.SetTile(tile);
       visit.EndFrame();

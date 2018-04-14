@@ -1,6 +1,6 @@
 #include "Compositor.h"
 
-namespace WarmT {
+namespace QCT {
 
   namespace algorithms {};
 

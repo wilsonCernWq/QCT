@@ -1,17 +1,17 @@
 #include "Tile.h"
 #include <iostream>
 
-namespace WarmT {
+namespace QCT {
 
   Tile::~Tile()
   {
-    if (flag & WARMT_TILE_SHARED) {
+    if (flag & QCT_TILE_SHARED) {
       if (this->r) delete[] this->r;
       if (this->g) delete[] this->g;
       if (this->b) delete[] this->b;
       if (this->a) delete[] this->a;
     }
-    if (flag & WARMT_TILE_REDUCED_DEPTH) {
+    if (flag & QCT_TILE_REDUCED_DEPTH) {
       if (this->z) delete this->z;
     } else {
       if (this->z) delete[] this->z;
@@ -35,7 +35,7 @@ namespace WarmT {
     : Tile(region, fbSize, flag)
   {
     /*! check if we need to do deep copy of the image data */
-    if (flag & WARMT_TILE_SHARED) {
+    if (flag & QCT_TILE_SHARED) {
       this->r = rptr;
       this->g = gptr;
       this->b = bptr;
@@ -64,7 +64,7 @@ namespace WarmT {
     /*! because we are having different data structures, we have to do deep
      *  copy here
      */
-    if (flag & WARMT_TILE_SHARED) {
+    if (flag & QCT_TILE_SHARED) {
       Error::WarnOnce("The tile cannot be shared because the RGBA "
                       "data is in an AOS style,\n"
                       "\twhile a SOA style is required");
@@ -91,7 +91,7 @@ namespace WarmT {
      *  as tile depth, the other mode stores an depth buffer since
      *  each pixel can have different depths
      */
-    if (flag & WARMT_TILE_REDUCED_DEPTH) {
+    if (flag & QCT_TILE_REDUCED_DEPTH) {
       this->z = new float(*depth);
     } else {
       this->z = new float[tileSize];

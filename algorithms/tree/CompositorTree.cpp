@@ -1,6 +1,6 @@
 #include "CompositorTree.h"
 
-namespace WarmT {
+namespace QCT {
 namespace algorithms {
 namespace tree {
 

@@ -1,7 +1,6 @@
-# WarmT Image Composer
-Testing program for our new image composition
+# Quick Compositing Toolkit
 
-# Build
+# How to build it
 ```
 mkdir build
 cd build

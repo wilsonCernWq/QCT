@@ -3,7 +3,7 @@
 #include <iostream>
 #include <set>
 
-namespace WarmT {
+namespace QCT {
   namespace Error {
     inline void WarnAlways(std::string str)
     {

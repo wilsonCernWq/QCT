@@ -8,7 +8,7 @@
 static avtSLIVRImgCommunicator* imgComm;
 static std::vector<float*> tileBufferList;
 
-namespace WarmT {
+namespace QCT {
 namespace algorithms {
 namespace visit {            
     

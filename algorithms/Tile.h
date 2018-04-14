@@ -8,10 +8,10 @@
 #include <cmath>
 #include <array>
 
-#define WARMT_TILE_SHARED        (1 << 0)
-#define WARMT_TILE_REDUCED_DEPTH (1 << 1)
+#define QCT_TILE_SHARED        (1 << 0)
+#define QCT_TILE_REDUCED_DEPTH (1 << 1)
 
-namespace WarmT {  
+namespace QCT {  
 
   typedef std::array<uint32_t, 2> arr2u;
   typedef std::array<uint32_t, 3> arr3u;
