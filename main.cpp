@@ -117,15 +117,21 @@ int main(const int ac, const char* av[])
     // Using VisIt Method
     ////////////////////////////////////////////////////////////////////////
     avtSLIVRImgCommunicator imgComm;       
-    const int fullImageExtents[4] = {0, (int)width, 0, (int)height};
+    //const int fullImageExtents[4] = {0, (int)width, 0, (int)height};
     // Start SERIAL : Single Processor    
+    imgComm.OneNodeInit(width, height);
     clock.Start();   
     // Get the metadata for all patches
     // contains the metadata to composite the image
-    std::vector<slivr::ImgMetaData> allPatchMeta;
-    std::vector<slivr::ImgData>     allPatchData;
+    //std::vector<slivr::ImgMetaData> allPatchMeta;
+    //std::vector<slivr::ImgData>     allPatchData;
     for (int i=0; i<numPatches; i++) {
-
+      int extents[4] = {imgList[i].GetExtents(0),
+                        imgList[i].GetExtents(1),
+                        imgList[i].GetExtents(2),
+                        imgList[i].GetExtents(3)};
+      imgComm.OneNodeSetTile(imgList[i].GetData(),
+                             extents, imgList[i].GetDepth());
       // float depth = imgList[i].GetDepth();
       // WarmT::Tile tile(imgList[i].GetExtents(0),
       // 		       imgList[i].GetExtents(2),
@@ -137,60 +143,61 @@ int main(const int ac, const char* av[])
       // 		       &depth,
       // 		       WARMT_TILE_REDUCED_DEPTH);
 
-      slivr::ImgMetaData currMeta;
-      currMeta.procId = mpiRank;
-      currMeta.patchNumber = i;
-      currMeta.destProcId = 0;
-      currMeta.inUse = 1;
-      currMeta.dims[0] = imgList[i].GetWidth();
-      currMeta.dims[1] = imgList[i].GetHeight();
-      currMeta.screen_ll[0] = imgList[i].GetExtents(0);
-      currMeta.screen_ll[1] = imgList[i].GetExtents(2);
-      currMeta.screen_ur[0] = imgList[i].GetExtents(1);
-      currMeta.screen_ur[1] = imgList[i].GetExtents(3);
-      currMeta.eye_z = imgList[i].GetDepth();
-      allPatchMeta.push_back(currMeta);
+      // slivr::ImgMetaData currMeta;
+      // currMeta.procId = mpiRank;
+      // currMeta.patchNumber = i;
+      // currMeta.destProcId = 0;
+      // currMeta.inUse = 1;
+      // currMeta.dims[0] = imgList[i].GetWidth();
+      // currMeta.dims[1] = imgList[i].GetHeight();
+      //currMeta.screen_ll[0] = imgList[i].GetExtents(0);
+      //currMeta.screen_ll[1] = imgList[i].GetExtents(2);
+      //currMeta.screen_ur[0] = imgList[i].GetExtents(1);
+      //currMeta.screen_ur[1] = imgList[i].GetExtents(3);
+      //currMeta.eye_z = imgList[i].GetDepth();
+      //allPatchMeta.push_back(currMeta);
     }    
-    // Sort with the largest z first
-    std::sort(allPatchMeta.begin(), 
-	      allPatchMeta.end(), 
-	      [](slivr::ImgMetaData const& before,
-		 slivr::ImgMetaData const& after)
-	      { return before.eye_z > after.eye_z; });
+    // // Sort with the largest z first
+    // std::sort(allPatchMeta.begin(), 
+    //           allPatchMeta.end(), 
+    //           [](slivr::ImgMetaData const& before,
+    //     	 slivr::ImgMetaData const& after)
+    //           { return before.eye_z > after.eye_z; });
 
-    // Blend images
-    int renderedWidth  = fullImageExtents[1] - fullImageExtents[0];
-    int renderedHeight = fullImageExtents[3] - fullImageExtents[2];
-    float *composedData = NULL;
-    composedData = new float[renderedWidth * renderedHeight * 4]();    
+    // // Blend images
+    // int renderedWidth  = fullImageExtents[1] - fullImageExtents[0];
+    // int renderedHeight = fullImageExtents[3] - fullImageExtents[2];
+
+    float *composedData = new float[CMD::width * CMD::height * 4]();    
+    imgComm.OneNodeComposite(composedData);
+    
     for (int i=0; i<numPatches; i++) {
-      slivr::ImgMetaData currMeta = allPatchMeta[i];
-      slivr::ImgData     currData;      
-      currData.imagePatch = imgList[currMeta.patchNumber].GetData();
-      currData.procId = currMeta.procId;
-      currData.patchNumber = currMeta.patchNumber;
-      int currExtents[4] = 
-	{currMeta.screen_ll[0], currMeta.screen_ur[0], 
-	 currMeta.screen_ll[1], currMeta.screen_ur[1]};
-      imgComm.BlendBackToFront
-	(currData.imagePatch, currExtents,
-	 composedData, fullImageExtents);      
+      // slivr::ImgMetaData currMeta = allPatchMeta[i];
+      // slivr::ImgData     currData;      
+      // currData.imagePatch = imgList[currMeta.patchNumber].GetData();
+      // currData.procId = currMeta.procId;
+      // currData.patchNumber = currMeta.patchNumber;
+      // int currExtents[4] = 
+      //   {currMeta.screen_ll[0], currMeta.screen_ur[0], 
+      //    currMeta.screen_ll[1], currMeta.screen_ur[1]};
+      // imgComm.BlendBackToFront
+      //   (currData.imagePatch, currExtents,
+      //    composedData, fullImageExtents);      
       // clean up data
-      if (currData.imagePatch != NULL) {
-	imgList[currMeta.patchNumber].DeleteImage();
-      }
-      currData.imagePatch = NULL;
+      //if (currData.imagePatch != NULL) {
+      imgList[i].DeleteImage();
+        //}
+      //currData.imagePatch = NULL;
     }    
-    allPatchMeta.clear();
-    allPatchData.clear();
+    //allPatchMeta.clear();
+    //allPatchData.clear();
     // Finalize
     clock.Stop();
     ////////////////////////////////////////////////////////////////////////
-    CreatePPM(composedData, renderedWidth, renderedHeight, outputdir + "image.ppm");   
+    CreatePPM(composedData, width, height, outputdir + "image.ppm");   
     std::cout << "[Single Node (VisIt method)] " << clock.GetDuration() 
 	      << " seconds to finish" << std::endl;
     ////////////////////////////////////////////////////////////////////////    
-
   } 
   else {
 
