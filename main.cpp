@@ -148,7 +148,7 @@ int main(const int ac, const char* av[])
       currMeta.screen_ll[1] = imgList[i].GetExtents(2);
       currMeta.screen_ur[0] = imgList[i].GetExtents(1);
       currMeta.screen_ur[1] = imgList[i].GetExtents(3);
-      currMeta.avg_z = imgList[i].GetDepth();
+      currMeta.eye_z = imgList[i].GetDepth();
       allPatchMeta.push_back(currMeta);
     }    
     // Sort with the largest z first
