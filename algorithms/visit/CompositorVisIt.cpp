@@ -3,8 +3,10 @@
 #include "avtSLIVRImgMetaData.h"
 #include "avtSLIVRImgCommunicator.h"
 
+#include <vector>
+
 static avtSLIVRImgCommunicator* imgComm;
-static float* IceT_tile_buffer = nullptr;
+static std::vector<float*> tileBufferList;
 
 namespace WarmT {
 
@@ -19,9 +21,9 @@ namespace WarmT {
 
   Compositor_VisIt::~Compositor_VisIt() {
     if (mpiRank == 0) {
-    if (rgba) delete[] rgba;
-      }
-    if (IceT_tile_buffer) delete[] IceT_tile_buffer;
+      if (rgba) delete[] rgba;
+    }
+    for (auto b : tileBufferList) { if (b) delete[] b; }
     delete imgComm;
   };
 
@@ -43,23 +45,19 @@ namespace WarmT {
 
   //! upload tile
   void Compositor_VisIt::SetTile(Tile &tile) {
+    float* ptr = new float[4 * tile.tileDim[0] * tile.tileDim[1]];
+    tileBufferList.push_back(ptr);
     switch (mode) {
     case(ICET):
-      if (IceT_tile_buffer) {
-	delete[] IceT_tile_buffer;
-	Error::WarnAlways("IceT_tile_buffer is non empty");
-      } 
-      IceT_tile_buffer = new float[4 * tile.tileDim[0] * tile.tileDim[1]];
       for (auto i = 0; i < tile.tileSize; ++i) {
-	IceT_tile_buffer[4 * i + 0] = tile.r[i];
-	IceT_tile_buffer[4 * i + 1] = tile.g[i];
-	IceT_tile_buffer[4 * i + 2] = tile.b[i];
-	IceT_tile_buffer[4 * i + 3] = tile.a[i];
+	ptr[4 * i + 0] = tile.r[i];
+	ptr[4 * i + 1] = tile.g[i];
+	ptr[4 * i + 2] = tile.b[i];
+	ptr[4 * i + 3] = tile.a[i];
       }
       int e[4] = {(int)tile.region[0], (int)tile.region[2],
 		  (int)tile.region[1], (int)tile.region[3]}; /* x0 x1 y0 y1 */
-      imgComm->IceTSetTile(IceT_tile_buffer, e,
-			   *(tile.z));
+      imgComm->IceTSetTile(ptr, e, *(tile.z));
       break;
     }
   };

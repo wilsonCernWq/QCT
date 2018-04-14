@@ -111,7 +111,7 @@ int main(const int ac, const char* av[])
   }
   
   // random image
-  if (mpiSize == 1 && false) {
+  if (mpiSize == 1) {
 
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
