@@ -183,10 +183,10 @@ int main(const int ac, const char* av[])
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
     ////////////////////////////////////////////////////////////////////////    
-    avtSLIVRImgCommunicator imgComm;
-    const int fullImageExtents[4] = {0, (int)width, 0, (int)height};
     clock.Start();
-    if (imgComm.IceTValid() && numPatches == 1) {
+    WarmT::Compositor_VisIt visit(WarmT::Compositor_VisIt::ICET,
+				  width, height);
+    if (visit.IsValid() && numPatches == 1) {
 
       /* porting the code into our API */
       float depth = imgList[0].GetDepth();
@@ -202,49 +202,51 @@ int main(const int ac, const char* av[])
 		       WARMT_TILE_SHARED);
       /* PORTING the code into our API */
 
-      slivr::ImgMetaData currMeta;
-      slivr::ImgData     currData;
-      currMeta.procId = mpiRank;
-      currMeta.patchNumber = 0;
-      currMeta.destProcId = 0;
-      currMeta.inUse = 1;
-      currMeta.dims[0] = imgList[0].GetWidth();
-      currMeta.dims[1] = imgList[0].GetHeight();
-      currMeta.screen_ll[0] = imgList[0].GetExtents(0);
-      currMeta.screen_ll[1] = imgList[0].GetExtents(2);
-      currMeta.screen_ur[0] = imgList[0].GetExtents(1);
-      currMeta.screen_ur[1] = imgList[0].GetExtents(3);
-      currMeta.avg_z = imgList[0].GetDepth();
-      currMeta.eye_z = imgList[0].GetDepth();
-      // std::cout << imgList[0].GetDepth() << std::endl;
-      // First Composition
-      int compositedW = fullImageExtents[1] - fullImageExtents[0];
-      int compositedH = fullImageExtents[3] - fullImageExtents[2];
-      float *compositedData = NULL;
-      if (mpiRank == 0) {
-	compositedData = new float[4 * compositedW * compositedH]();
-      }
-      int currExtents[4] = 
-	{std::max(currMeta.screen_ll[0]-fullImageExtents[0], 0), 
-	 std::min(currMeta.screen_ur[0]-fullImageExtents[0], 
-		  compositedW), 
-	 std::max(currMeta.screen_ll[1]-fullImageExtents[2], 0),
-	 std::min(currMeta.screen_ur[1]-fullImageExtents[2],
-		  compositedH)};
-      imgComm.IceTInit(compositedW, compositedH);
-      imgComm.IceTSetTile(imgList[0].GetData(), 
-			  currExtents,
-			  currMeta.eye_z);
-      imgComm.IceTComposite(compositedData);
-      if (currData.imagePatch != NULL) {
-	delete[] currData.imagePatch;
-	currData.imagePatch = NULL;
-      }     
+      // slivr::ImgMetaData currMeta;
+      // slivr::ImgData     currData;
+      // currMeta.procId = mpiRank;
+      // currMeta.patchNumber = 0;
+      // currMeta.destProcId = 0;
+      // currMeta.inUse = 1;
+      // currMeta.dims[0] = imgList[0].GetWidth();
+      // currMeta.dims[1] = imgList[0].GetHeight();
+      // currMeta.screen_ll[0] = imgList[0].GetExtents(0);
+      // currMeta.screen_ll[1] = imgList[0].GetExtents(2);
+      // currMeta.screen_ur[0] = imgList[0].GetExtents(1);
+      // currMeta.screen_ur[1] = imgList[0].GetExtents(3);
+      // currMeta.avg_z = imgList[0].GetDepth();
+      // currMeta.eye_z = imgList[0].GetDepth();
+      // // First Composition
+      // int compositedW = fullImageExtents[1] - fullImageExtents[0];
+      // int compositedH = fullImageExtents[3] - fullImageExtents[2];
+      //float *compositedData = NULL;
+      //if (mpiRank == 0) {
+      //  compositedData = new float[4 * compositedW * compositedH]();
+      //}
+      // int currExtents[4] = 
+      // 	{std::max(currMeta.screen_ll[0]-fullImageExtents[0], 0), 
+      // 	 std::min(currMeta.screen_ur[0]-fullImageExtents[0], 
+      // 		  compositedW), 
+      // 	 std::max(currMeta.screen_ll[1]-fullImageExtents[2], 0),
+      // 	 std::min(currMeta.screen_ur[1]-fullImageExtents[2],
+      // 		  compositedH)};
+      //imgComm.IceTInit(compositedW, compositedH);
+      //imgComm.IceTSetTile(imgList[0].GetData(), 
+      // 			  currExtents,
+      // 			  currMeta.eye_z);
+      // imgComm.IceTComposite(compositedData);
+      // if (currData.imagePatch != NULL) {
+      // 	delete[] currData.imagePatch;
+      // 	currData.imagePatch = NULL;
+      // }     
       // Finalize
+      visit.BeginFrame();
+      visit.SetTile(tile);
+      visit.EndFrame();
       clock.Stop();
       ////////////////////////////////////////////////////////////////////////
-      CreatePPM(compositedData, 
-		compositedW, compositedH,
+      CreatePPM((float*)visit.MapColorBuffer(), 
+		width, height,
 		outputdir + "composed.ppm");
       std::cout << "[Multiple Node (VisIt method)] " << clock.GetDuration() 
 		<< " seconds to finish" << std::endl;

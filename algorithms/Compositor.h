@@ -7,6 +7,11 @@
 #include <iostream>
 #include <cmath>
 #include <array>
+
+#if PARALLEL
+# include <mpi.h>
+#endif
+
 #include "common/error.h"
 
 #define WARMT_TILE_SHARED        1 << 0
@@ -21,32 +26,36 @@ namespace WarmT {
   class Tile {
   public:
     /*! we select this tile format because we want to eventually port our 
-     *  library into ospray
-     */
-    // 'red' component; in float.
-    float *r;
-    // 'green' component; in float.
-    float *g;
-    // 'blue' component; in float.
-    float *b;
-    // 'alpha' component; in float.
-    float *a;
-    // 'depth' component; in float.
-    float *z;
+      library into ospray */
+    /*!< register flag */
+    uint32_t flag{0};
     /*!< screen region that this tile corresponds to */
     std::array<uint32_t, 4> region;
     /*!< total frame buffer size, for the camera */ 
     std::array<uint32_t, 2> fbSize;
     /*!< tile size */ 
     std::array<uint32_t, 2> tileDim;
-    uint32_t tileSize;
- 
-    Tile() = default;
+    uint32_t tileSize{0};
+    // 'red' component; in float.
+    float *r = nullptr;
+    // 'green' component; in float.
+    float *g = nullptr;
+    // 'blue' component; in float.
+    float *b = nullptr;
+    // 'alpha' component; in float.
+    float *a = nullptr;
+    // 'depth' component; in float.
+    float *z = nullptr;
+
+    ~Tile();
+    Tile() = default;   
+
     Tile(const std::array<uint32_t, 4> &region, 
 	 const std::array<uint32_t, 2> &fbSize,
 	 float* rptr, float* gptr, float* bptr, float* aptr,
 	 float* depth, 
 	 const uint32_t flag);
+
     Tile(const std::array<uint32_t, 4> &region, 
 	 const std::array<uint32_t, 2> &fbSize,
 	 float* rgba, float* depth, 
@@ -80,13 +89,25 @@ namespace WarmT {
 
   private:
     Tile(const std::array<uint32_t, 4> &region, 
-	 const std::array<uint32_t, 2> &fbSize);
+	 const std::array<uint32_t, 2> &fbSize,
+	 const uint32_t flag);
     void SetDepth(float* depth, const uint32_t flag);
   };
 
   /*! Abstract API for image compositing */  
   class Compositor {
+  protected:
+    int mpiRank = 0, mpiSize = 1;
+    Compositor() {
+#if PARALLEL
+      MPI_Comm_rank(MPI_COMM_WORLD, &mpiRank);
+      MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+#endif
+    }
   public:
+    //! status
+    virtual bool IsValid() = 0;
+
     //! function to get final results
     virtual const void *MapDepthBuffer() = 0;
     virtual const void *MapColorBuffer() = 0;

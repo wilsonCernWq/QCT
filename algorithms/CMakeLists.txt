@@ -2,6 +2,7 @@ add_library(algorithms${WARMT_BUILD_SURFIX}
   # parent class
   Compositor.cpp
   # method: VisIt
+  visit/CompositorVisIt.cpp
   visit/avtSLIVRImgCommunicator.C
   visit/avtSLIVRImgMetaData.C
   # method: tree

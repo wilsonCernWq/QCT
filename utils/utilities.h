@@ -11,7 +11,8 @@
 #include "color.h"
 #include "timer.h"
 
-inline void CreatePPM(float * image, int dimX, int dimY, std::string filename)
+inline void CreatePPM(const float * image, int dimX, int dimY, 
+		      const std::string& filename)
 {
     std::ofstream outputFile(filename.c_str(), std::ios::out | std::ios::binary);
     outputFile <<  "P6\n" << dimX << "\n" << dimY << "\n" << 255 << "\n";    
@@ -28,7 +29,8 @@ inline void CreatePPM(float * image, int dimX, int dimY, std::string filename)
     outputFile.close();
 }
 
-inline void CreateColorPPM(Color *data, int width, int height, std::string filename)
+inline void CreateColorPPM(const Color *data, int width, int height, 
+			   const std::string& filename)
 {
     std::ofstream outputFile(filename.c_str(), std::ios::out | std::ios::binary);
     outputFile <<  "P6\n" << width << "\n" << height << "\n" << 255 << "\n";   

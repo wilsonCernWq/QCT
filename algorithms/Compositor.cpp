@@ -2,9 +2,25 @@
 
 namespace WarmT {
 
+  Tile::~Tile()
+  {
+    if (flag & WARMT_TILE_SHARED) {
+      if (this->r) delete[] this->r;
+      if (this->g) delete[] this->g;
+      if (this->b) delete[] this->b;
+      if (this->a) delete[] this->a;
+    }
+    if (flag & WARMT_TILE_REDUCED_DEPTH) {
+      if (this->z) delete this->z;
+    } else {
+      if (this->z) delete[] this->z;
+    }
+  }
+
   Tile::Tile(const std::array<uint32_t, 4> &region, 
-	     const std::array<uint32_t, 2> &fbSize)
-    : region (region), fbSize (fbSize)
+	     const std::array<uint32_t, 2> &fbSize,
+	     const uint32_t flag)
+    :  flag(flag), region(region), fbSize(fbSize)
   {
     tileDim[0] = region[2]-region[0];
     tileDim[1] = region[3]-region[1];
@@ -15,7 +31,7 @@ namespace WarmT {
 	     const std::array<uint32_t, 2> &fbSize,
 	     float* rptr, float* gptr, float* bptr, float* aptr,
 	     float* depth, const uint32_t flag)
-    : Tile(region, fbSize)
+    : Tile(region, fbSize, flag)
   {
     /*! check if we need to do deep copy of the image data */
     if (flag & WARMT_TILE_SHARED) {
@@ -42,7 +58,7 @@ namespace WarmT {
   Tile::Tile(const std::array<uint32_t, 4> &region, 
 	     const std::array<uint32_t, 2> &fbSize,
 	     float* rgba, float* depth, const uint32_t flag)
-    : Tile(region, fbSize)
+    : Tile(region, fbSize, flag)
   {
     /*! because we are having different data structures, we have to do deep
      *  copy here

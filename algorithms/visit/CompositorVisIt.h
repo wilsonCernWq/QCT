@@ -5,27 +5,36 @@
 namespace WarmT {
 
   class Compositor_VisIt : public Compositor {
+  private:
+    uint32_t W, H;
+    float* rgba  = nullptr;
+    float* depth = nullptr;
   public:
     enum Mode { SEQUENTIAL, ICET } mode;
-    Compositor_VisIt(const Mode& m);
+    Compositor_VisIt(const Mode& m, 
+		     const uint32_t& width,
+		     const uint32_t& height);
     virtual ~Compositor_VisIt();
 
+    //! status
+    bool IsValid() override;
+
     //! function to get final results
-    virtual const void *MapDepthBuffer() = 0;
-    virtual const void *MapColorBuffer() = 0;
-    virtual void Unmap(const void *mappedMem) = 0;
+    const void *MapDepthBuffer() override;
+    const void *MapColorBuffer() override;
+    void Unmap(const void *mappedMem) override;
 
     //! upload tile
-    virtual void SetTile(Tile &tile) = 0;
+    void SetTile(Tile &tile) override;
 
     //! clear (the specified channels of) this frame buffer
-    virtual void Clear(const uint32_t channelFlags) = 0;
-
+    void Clear(const uint32_t channelFlags) override;
+    
     //! begin frame
-    virtual void BeginFrame() = 0;
-
+    void BeginFrame() override;
+    
     //! end frame
-    virtual void EndFrame() = 0;
+    void EndFrame() override;
   };
 
 
