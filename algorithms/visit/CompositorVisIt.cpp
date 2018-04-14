@@ -28,7 +28,9 @@ namespace WarmT {
     //! function to get final results
     const void *Compositor_VisIt::MapDepthBuffer() { return depth; };
     const void *Compositor_VisIt::MapColorBuffer() { return rgba; };
-    void Compositor_VisIt::Unmap(const void *mappedMem) { mappedMem = nullptr; };
+    void Compositor_VisIt::Unmap(const void *mappedMem) { 
+        mappedMem = nullptr; 
+    };
 
     //! clear (the specified channels of) this frame buffer
     void Compositor_VisIt::Clear(const uint32_t channelFlags) {};
@@ -79,8 +81,9 @@ namespace WarmT {
             ptr[4 * i + 3] = tile.a[i];
         }
         tileBufferList.push_back(ptr);
+        /* x0 x1 y0 y1 */
         int e[4] = {(int)tile.region[0], (int)tile.region[2],
-                    (int)tile.region[1], (int)tile.region[3]}; /* x0 x1 y0 y1 */        
+                    (int)tile.region[1], (int)tile.region[3]}; 
         // set tile
         switch (mode) {
         case(ONENODE):
