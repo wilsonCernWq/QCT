@@ -10,6 +10,7 @@ target_include_directories(algoComm${WARMT_BUILD_SURFIX} PRIVATE
 # │  Different Algorithms                                            │
 # └──────────────────────────────────────────────────────────────────┘
 add_subdirectory(visit)
+add_subdirectory(tree)
 
 # ┌──────────────────────────────────────────────────────────────────┐
 # │  Create an Overall library                                       │
@@ -22,7 +23,8 @@ target_include_directories(algorithms${WARMT_BUILD_SURFIX} PRIVATE
   ">")
 target_link_libraries(algorithms${WARMT_BUILD_SURFIX} 
   algoComm${WARMT_BUILD_SURFIX}
-  algoVisIt${WARMT_BUILD_SURFIX})
+  algoVisIt${WARMT_BUILD_SURFIX}
+  algoTree${WARMT_BUILD_SURFIX})
 set_target_properties(algorithms${WARMT_BUILD_SURFIX} 
   PROPERTIES
   COMPILE_FLAGS "${WARMT_BUILD_FLAG}")

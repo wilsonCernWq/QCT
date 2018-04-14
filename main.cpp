@@ -4,12 +4,10 @@
 #include "utils/image.h"
 #include "utils/timer.h"
 
-// debug
-#include "algorithms/tree/common/TreeDiagram.h"
-
-// build a binary tree compositing program step by step
+// all the algorithms
 #include "algorithms/Compositor.h"
 #include "algorithms/visit/CompositorVisIt.h"
+#include "algorithms/tree/CompositorTree.h"
 
 #include <unistd.h>
 #include <cstdlib>
@@ -61,6 +59,7 @@ namespace CMD {
   static size_t numPatches = 1;
 };
 using namespace CMD;
+using CommandLine::Parse;
 
 int main(const int ac, const char* av[])
 { 
@@ -70,16 +69,16 @@ int main(const int ac, const char* av[])
   for (int i = 1; i < ac; ++i) {
     std::string str(av[i]);
     if (str == "-w") {
-      CommandLine::Parse<1>(ac, av, i, CMD::width);
+      Parse<1>(ac, av, i, CMD::width);
     }
     else if (str == "-h") {
-      CommandLine::Parse<1>(ac, av, i, CMD::height);
+      Parse<1>(ac, av, i, CMD::height);
     }
     else if (str == "-random") {
-      CommandLine::Parse<1>(ac, av, i, CMD::random_size);
+      Parse<1>(ac, av, i, CMD::random_size);
     }
     else if (str == "-numPatches") {
-      CommandLine::Parse<1>(ac, av, i, CMD::numPatches);
+      Parse<1>(ac, av, i, CMD::numPatches);
     }
   }
 

@@ -15,8 +15,7 @@ namespace visit {
     Compositor_VisIt::Compositor_VisIt(const Mode& m,
                                        const uint32_t& width,
                                        const uint32_t& height)    
-        : mode(m), W(width), H(height)
-    {
+        : mode(m), W(width), H(height) {
         if (mpiRank == 0) { rgba = new float[4 * W * H](); }
         imgComm = new avtSLIVRImgCommunicator();
     };
@@ -30,9 +29,7 @@ namespace visit {
     //! function to get final results
     const void *Compositor_VisIt::MapDepthBuffer() { return depth; };
     const void *Compositor_VisIt::MapColorBuffer() { return rgba; };
-    void Compositor_VisIt::Unmap(const void *mappedMem) { 
-        mappedMem = nullptr; 
-    };
+    void Compositor_VisIt::Unmap(const void *mappedMem) {};
 
     //! clear (the specified channels of) this frame buffer
     void Compositor_VisIt::Clear(const uint32_t channelFlags) {};

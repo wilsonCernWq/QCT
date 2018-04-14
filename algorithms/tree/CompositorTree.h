@@ -1,28 +1,35 @@
 #pragma once
 
 #include "../Compositor.h"
+#include "common/TreeDiagram.h"
 
 namespace WarmT {
+namespace algorithms {
+namespace tree {
 
   class Compositor_Tree : public Compositor {
   public:
+    //! status
+    bool IsValid() override;
+
     //! function to get final results
-    virtual const void *MapDepthBuffer() = 0;
-    virtual const void *MapColorBuffer() = 0;
-    virtual void Unmap(const void *mappedMem) = 0;
+    const void *MapDepthBuffer() override;
+    const void *MapColorBuffer() override;
+    void Unmap(const void *mappedMem) override;
 
     //! upload tile
-    virtual void SetTile(Tile &tile) = 0;
+    void SetTile(Tile &tile) override;
 
     //! clear (the specified channels of) this frame buffer
-    virtual void Clear(const uint32_t channelFlags) = 0;
+    void Clear(const uint32_t channelFlags) override;
 
     //! begin frame
-    virtual void BeginFrame() = 0;
+    void BeginFrame() override;
 
     //! end frame
-    virtual void EndFrame() = 0;
+    void EndFrame() override;
   };
 
-
+};
+};
 };
