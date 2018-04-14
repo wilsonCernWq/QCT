@@ -20,7 +20,7 @@
 
 #include <mpi.h>
 
-std::string outputdir = "./";
+std::string outputdir = "./image.ppm";
 
 void InitImage
 (int minX, int maxX, int minY, int maxY, 
@@ -110,28 +110,45 @@ int main(const int ac, const char* av[])
     InitImage(minX, maxX, minY, maxY, mpiRank, imgList[i], i, CMD::random_size);
   }
   
-  // random image
+  // 
   if (mpiSize == 1) {
 
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
     ////////////////////////////////////////////////////////////////////////
-    avtSLIVRImgCommunicator imgComm;       
+    WarmT::Compositor_VisIt visit(WarmT::Compositor_VisIt::ONENODE,
+                                  CMD::width, CMD::height);  
+    // avtSLIVRImgCommunicator imgComm;       
     //const int fullImageExtents[4] = {0, (int)width, 0, (int)height};
     // Start SERIAL : Single Processor    
-    imgComm.OneNodeInit(width, height);
-    clock.Start();   
+    //imgComm.OneNodeInit(width, height);
+    clock.Start(); 
+
+    visit.BeginFrame();
     // Get the metadata for all patches
     // contains the metadata to composite the image
     //std::vector<slivr::ImgMetaData> allPatchMeta;
     //std::vector<slivr::ImgData>     allPatchData;
     for (int i=0; i<numPatches; i++) {
-      int extents[4] = {imgList[i].GetExtents(0),
-                        imgList[i].GetExtents(1),
-                        imgList[i].GetExtents(2),
-                        imgList[i].GetExtents(3)};
-      imgComm.OneNodeSetTile(imgList[i].GetData(),
-                             extents, imgList[i].GetDepth());
+      /* porting the code into our API */
+      float depth = imgList[i].GetDepth();
+      WarmT::Tile tile(imgList[i].GetExtents(0),
+		       imgList[i].GetExtents(2),
+		       imgList[i].GetExtents(1),
+		       imgList[i].GetExtents(3),
+		       width,
+		       height,
+		       imgList[i].GetData(),
+		       &depth,
+		       WARMT_TILE_REDUCED_DEPTH);
+      visit.SetTile(tile);
+
+      // int extents[4] = {imgList[i].GetExtents(0),
+      //                   imgList[i].GetExtents(1),
+      //                   imgList[i].GetExtents(2),
+      //                   imgList[i].GetExtents(3)};
+      // imgComm.OneNodeSetTile(imgList[i].GetData(),
+      //                        extents, imgList[i].GetDepth());
       // float depth = imgList[i].GetDepth();
       // WarmT::Tile tile(imgList[i].GetExtents(0),
       // 		       imgList[i].GetExtents(2),
@@ -157,6 +174,9 @@ int main(const int ac, const char* av[])
       //currMeta.eye_z = imgList[i].GetDepth();
       //allPatchMeta.push_back(currMeta);
     }    
+    visit.EndFrame();
+    clock.Stop();
+
     // // Sort with the largest z first
     // std::sort(allPatchMeta.begin(), 
     //           allPatchMeta.end(), 
@@ -168,8 +188,8 @@ int main(const int ac, const char* av[])
     // int renderedWidth  = fullImageExtents[1] - fullImageExtents[0];
     // int renderedHeight = fullImageExtents[3] - fullImageExtents[2];
 
-    float *composedData = new float[CMD::width * CMD::height * 4]();    
-    imgComm.OneNodeComposite(composedData);
+    //float *composedData = new float[CMD::width * CMD::height * 4]();    
+    //imgComm.OneNodeComposite(composedData);
     
     for (int i=0; i<numPatches; i++) {
       // slivr::ImgMetaData currMeta = allPatchMeta[i];
@@ -186,15 +206,15 @@ int main(const int ac, const char* av[])
       // clean up data
       //if (currData.imagePatch != NULL) {
       imgList[i].DeleteImage();
-        //}
+      //}
       //currData.imagePatch = NULL;
     }    
     //allPatchMeta.clear();
     //allPatchData.clear();
     // Finalize
-    clock.Stop();
     ////////////////////////////////////////////////////////////////////////
-    CreatePPM(composedData, width, height, outputdir + "image.ppm");   
+    CreatePPM((float*)visit.MapColorBuffer(),
+              width, height, outputdir);   
     std::cout << "[Single Node (VisIt method)] " << clock.GetDuration() 
 	      << " seconds to finish" << std::endl;
     ////////////////////////////////////////////////////////////////////////    
@@ -203,10 +223,10 @@ int main(const int ac, const char* av[])
 
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
-    ////////////////////////////////////////////////////////////////////////    
-    clock.Start();
+    //////////////////////////////////////////////////////////////////////// 
     WarmT::Compositor_VisIt visit(WarmT::Compositor_VisIt::ICET,
-				  CMD::width, CMD::height);
+                                  CMD::width, CMD::height);  
+    clock.Start();
     if (visit.IsValid() && numPatches == 1) {
       /* porting the code into our API */
       float depth = imgList[0].GetDepth();
@@ -225,7 +245,7 @@ int main(const int ac, const char* av[])
       clock.Stop();
       ////////////////////////////////////////////////////////////////////////
       CreatePPM((float*)visit.MapColorBuffer(), 
-		width, height, outputdir + "image.ppm");
+		width, height, outputdir);
       std::cout << "[Multiple Node (VisIt method)] " << clock.GetDuration() 
 		<< " seconds to finish" << std::endl;
       ////////////////////////////////////////////////////////////////////////    

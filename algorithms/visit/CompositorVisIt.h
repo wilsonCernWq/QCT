@@ -10,7 +10,7 @@ namespace WarmT {
     float* rgba  = nullptr;
     float* depth = nullptr;
   public:
-    enum Mode { SEQUENTIAL, ICET } mode;
+    enum Mode { ONENODE, ICET, SERIAL } mode;
     Compositor_VisIt(const Mode& m, 
 		     const uint32_t& width,
 		     const uint32_t& height);
@@ -36,6 +36,5 @@ namespace WarmT {
     //! end frame
     void EndFrame() override;
   };
-
 
 };
