@@ -1,83 +1,42 @@
-# setup cmake
+# ┌──────────────────────────────────────────────────────────────────┐
+# │  Projects Settings                                               │
+# └──────────────────────────────────────────────────────────────────┘
 cmake_minimum_required (VERSION 3.5)
-project (HotT)
-add_definitions(-std=c++1z) # cmake 3.5 does not support c17
+project(QCT VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG")
 
-# find TBB 
-find_package(TBB QUIET)
+# ┌──────────────────────────────────────────────────────────────────┐
+# │  Load libraries                                                  │
+# └──────────────────────────────────────────────────────────────────┘
+include(cmake/packages.cmake)
 
-# find MPI
-find_package(MPI REQUIRED)
-if (MPI_FOUND)
+# ┌──────────────────────────────────────────────────────────────────┐
+# │  Projects Settings                                               │
+# └──────────────────────────────────────────────────────────────────┘
+set(WARMT_BUILD_FLAG   "")
+set(WARMT_BUILD_SURFIX "")
 
-  # message(STATUS "MPI_CXX_INCLUDE_PATH: ${MPI_CXX_INCLUDE_PATH}")
-  # message(STATUS "MPI_CXX_COMPILE_FLAGS: ${MPI_CXX_COMPILE_FLAGS}")
-  # message(STATUS "MPI_CXX_LINK_FLAGS: ${MPI_CXX_LINK_FLAGS}")
-  # message(STATUS "MPI_CXX_LIBRARIES: ${MPI_CXX_LIBRARIES}")
-  
-  add_library(MPI INTERFACE IMPORTED)
-  set_target_properties(MPI PROPERTIES
-    INTERFACE_COMPILE_DEFINITIONS PARALLEL=1
-    INTERFACE_INCLUDE_DIRECTORIES "${MPI_CXX_INCLUDE_PATH}"
-    INTERFACE_LINK_LIBRARIES "${MPI_CXX_LIBRARIES}")
+# subdirectories
+add_subdirectory(algorithms)
 
-  if (MPI_CXX_COMPILE_FLAGS)
-    set_target_properties(MPI PROPERTIES 
-      INTERFACE_COMPILE_FLAGS "${MPI_CXX_COMPILE_FLAGS}")
-  endif (MPI_CXX_COMPILE_FLAGS)
-  if (MPI_CXX_LINK_FLAGS)
-    set_target_properties(MPI PROPERTIES 
-      INTERFACE_LINK_FLAGS "${MPI_CXX_LINK_FLAGS}")
-  endif (MPI_CXX_LINK_FLAGS)
+# ┌──────────────────────────────────────────────────────────────────┐
+# │  Testing Program                                                 │
+# └──────────────────────────────────────────────────────────────────┘
+# helper library (this library should not be used outside the project)
+add_library(utils${WARMT_BUILD_SURFIX}
+  utils/image.cpp
+  utils/timer.cpp)
+target_include_directories(utils${WARMT_BUILD_SURFIX} PUBLIC
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/utils;>")
+target_link_libraries(utils${WARMT_BUILD_SURFIX} "")
+set_target_properties(utils${WARMT_BUILD_SURFIX} 
+  PROPERTIES COMPILE_FLAGS "${WARMT_BUILD_FLAG} -std=c++1z")
 
-endif()
-
-# find IceT
-find_package(IceT)
-if (IceT_FOUND)
-  add_library(icet INTERFACE IMPORTED)
-  set(ICET_LIBS "")
-  foreach(l ${ICET_CORE_LIBS} ${ICET_MPI_LIBS})
-    list(APPEND ICET_LIBS ${IceT_DIR}/lib${l}.a)
-  endforeach()
-  set_target_properties(icet PROPERTIES
-    INTERFACE_COMPILE_DEFINITIONS VISIT_ICET=1
-    INTERFACE_INCLUDE_DIRECTORIES "${ICET_INCLUDE_DIRS}"
-    INTERFACE_LINK_LIBRARIES "${ICET_LIBS}")
-endif (IceT_FOUND)
-
-# marco to build project
-macro(BUILD_ALL surfix flag)
-
-  message("building ${surfix} version - flags: ${flag}")
-
-  # helper library
-  add_library(utils_${surfix}
-    algorithms/visit/avtSLIVRImgCommunicator.C
-    algorithms/visit/avtSLIVRImgMetaData.C
-    utils/image.cpp
-    utils/timer.cpp)
-  target_include_directories(utils_${surfix} PUBLIC
-    "$<BUILD_INTERFACE:"
-    "${CMAKE_CURRENT_SOURCE_DIR}/algorithms/visit;"
-    "${CMAKE_CURRENT_SOURCE_DIR}/utils>")
-  target_link_libraries(utils_${surfix} 
-    icet 
-    MPI)
-  set_target_properties(utils_${surfix} 
-    PROPERTIES
-    COMPILE_FLAGS "${flag}")
-
-  # main program
-  add_executable(composer_${surfix} main.cpp)
-  target_link_libraries(composer_${surfix} 
-    utils_${surfix}
-    MPI)
-  set_target_properties(composer_${surfix} 
-    PROPERTIES
-    COMPILE_FLAGS "${flag}")
-
-endmacro()
-
-BUILD_ALL("o3" "-O3")
+# testing program
+add_executable(example${WARMT_BUILD_SURFIX} main.cpp)
+target_link_libraries(example${WARMT_BUILD_SURFIX} 
+  utils${WARMT_BUILD_SURFIX} 
+  algorithms${WARMT_BUILD_SURFIX}
+  MPI)
+set_target_properties(example${WARMT_BUILD_SURFIX} 
+  PROPERTIES COMPILE_FLAGS "${WARMT_BUILD_FLAG} -std=c++1z")

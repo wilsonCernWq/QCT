@@ -7,7 +7,9 @@
 #include <cstdint>
 #include <stdexcept>
 
-namespace WarmT {
+namespace QCT {
+namespace algorithms {
+namespace tree {
 
   /*! This is simple a linked list. ``nullptr'' represents a empty node
    */
@@ -77,8 +79,10 @@ namespace WarmT {
       }
     }
 
-    Node&       GetParent(const NodeRef i)       { CheckIndex(i); return list[i]; }
-    const Node& GetParent(const NodeRef i) const { CheckIndex(i); return list[i]; }
+    Node&       GetParent(const NodeRef i)
+    { CheckIndex(i); return list[i]; }
+    const Node& GetParent(const NodeRef i) const 
+    { CheckIndex(i); return list[i]; }
 
     bool IsRoot(const NodeRef i) const { 
       CheckIndex(i);
@@ -103,4 +107,6 @@ namespace WarmT {
   /*! which data structure to use */
   using TreeDiagram = TreeDiagram_Array;
 
+};
+};
 };
