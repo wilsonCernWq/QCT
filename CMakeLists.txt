@@ -16,27 +16,23 @@ include(cmake/packages.cmake)
 set(WARMT_BUILD_FLAG   "")
 set(WARMT_BUILD_SURFIX "")
 
-# subdirectories
+# ┌──────────────────────────────────────────────────────────────────┐
+# │  Add Sub-Directories                                             │
+# └──────────────────────────────────────────────────────────────────┘ 
 add_subdirectory(algorithms)
 
 # ┌──────────────────────────────────────────────────────────────────┐
-# │  Testing Program                                                 │
+# │  QCT Library                                                     │
 # └──────────────────────────────────────────────────────────────────┘
-# helper library (this library should not be used outside the project)
-add_library(utils${WARMT_BUILD_SURFIX}
-  utils/image.cpp
-  utils/timer.cpp)
-target_include_directories(utils${WARMT_BUILD_SURFIX} PUBLIC
-  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/utils;>")
-target_link_libraries(utils${WARMT_BUILD_SURFIX} "")
-set_target_properties(utils${WARMT_BUILD_SURFIX} 
+add_library(qct${WARMT_BUILD_SURFIX} api.cpp)
+target_include_directories(qct${WARMT_BUILD_SURFIX} PRIVATE
+  "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR};>")
+target_link_libraries(qct${WARMT_BUILD_SURFIX} PRIVATE
+  algorithms${WARMT_BUILD_SURFIX})
+set_target_properties(qct${WARMT_BUILD_SURFIX}
   PROPERTIES COMPILE_FLAGS "${WARMT_BUILD_FLAG} -std=c++1z")
 
-# testing program
-add_executable(example${WARMT_BUILD_SURFIX} main.cpp)
-target_link_libraries(example${WARMT_BUILD_SURFIX} 
-  utils${WARMT_BUILD_SURFIX} 
-  algorithms${WARMT_BUILD_SURFIX}
-  MPI)
-set_target_properties(example${WARMT_BUILD_SURFIX} 
-  PROPERTIES COMPILE_FLAGS "${WARMT_BUILD_FLAG} -std=c++1z")
+# ┌──────────────────────────────────────────────────────────────────┐
+# │  Example Program                                                 │
+# └──────────────────────────────────────────────────────────────────┘
+add_subdirectory(example)
