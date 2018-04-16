@@ -3,6 +3,8 @@
 #include "algorithms/visit/CompositorVisIt.h"
 #include "algorithms/tree/CompositorTree.h"
 
+#include <mpi.h>
+
 namespace QCT {
 
   //! create compositor
@@ -27,7 +29,18 @@ namespace QCT {
         (algorithms::visit::Compositor_VisIt::ONENODE, w, h);
       break;
     case ALGO_TREE:
-      throw std::runtime_error("tree algorithm not implemented");
+      int mpiSize;
+      MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
+      // Create Tree Using Python
+      std::string tree_file = "tree";
+      std::string python_dir = "python3 ../algorithms/tree/graph/optimize/create_tree.py -n  ";
+      std::string node_num = std::to_string(mpiSize);
+      std::string command = python_dir + node_num + " -o " + tree_file;
+      system(command.c_str());
+      std::cout << "debug tree file name = " << tree_file << std::endl;
+      compositor = 
+	std::make_unique<algorithms::tree::Compositor_Tree>
+	(w, h, tree_file);
       break;
     }
     return compositor;
