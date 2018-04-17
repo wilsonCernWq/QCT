@@ -33,10 +33,10 @@ namespace QCT {
       MPI_Comm_size(MPI_COMM_WORLD, &mpiSize);
       // Create Tree Using Python
       std::string tree_file = "../tree";
-      std::string python_dir = "python3 ../algorithms/tree/graph/optimize/create_tree.py -n  ";
-      std::string node_num = std::to_string(mpiSize);
-      std::string command = python_dir + node_num + " -o " + tree_file;
-      system(command.c_str());
+     // std::string python_dir = "python3 ../algorithms/tree/graph/optimize/create_tree.py -n  ";
+     // std::string node_num = std::to_string(mpiSize);
+     // std::string command = python_dir + node_num + " -o " + tree_file;
+     //system(command.c_str());
       compositor = 
 	std::make_unique<algorithms::tree::Compositor_Tree>
 	(w, h, tree_file);

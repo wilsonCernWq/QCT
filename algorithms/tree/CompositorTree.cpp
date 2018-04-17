@@ -17,20 +17,55 @@ namespace QCT {
 namespace algorithms {
 namespace tree {
 
+    //inline void GetLineInfo(std::string file, int index, int &send, int &receive){
+
+     //// Find send, receive from tree file
+       //file = file + ".csv";
+       //std::ifstream f(file);
+       //std::string line, csvItem;
+       //int lineNum = 0;
+       //int Rank;
+       //std::vector<int> temp_content;
+       //if(f.is_open()){
+           //while(f >> Rank >> send >> receive){
+               //if(Rank == mpi_rank){
+               //}
+           //}
+           ////while(getline(f, line)){
+               ////lineNum++;
+               ////if(lineNum == InfoIndex){
+                   ////std:: istringstream myline(line);
+                   ////while(getline(myline, csvItem, ',')){
+                       //////std::cout << "csvItem = " << csvItem << std::endl;        
+                       ////temp_content.push_back(std::stoi(csvItem));
+                   ////} 
+               ////}
+           ////}
+       //}
+    //}   
+
   struct MetaInfo {
     uint32_t rack : 16, chassis : 8, node : 8;
     float depth;
   };
   static MetaInfo info;
   
-  void ExchangeInfo(const int mpiRank, const int mpiSize) {
+  void ExchangeInfo(const int mpiRank, const int mpiSize, std::string tree_output) {
     std::vector<MetaInfo> buffer(mpiSize);
     MPI_Alltoall(&info, sizeof(info), MPI_BYTE,
                  buffer.data(), sizeof(info), MPI_BYTE, 
                  MPI_COMM_WORLD);
+    std::string command = "python3 ../algorithm/tree/graph/optimize/create_tree.py -o ";
+    command = command + tree_output + " -i ";
+
     /* pass stuffs to python */
     if (mpiRank == 0) {
       for (int i = 0; i < mpiSize; ++i) {
+          command = command + std::to_string(buffer[i].rack) + " "
+                            + std::to_string(buffer[i].chassis) + " "
+                            + std::to_string(buffer[i].depth) + " " ;
+                        
+          
         // std::cout << "rack " << buffer[i].rack << " "
         //           << "chassis " << buffer[i].chassis << " "
         //           << "node " << buffer[i].node << " "
@@ -85,38 +120,36 @@ namespace tree {
   }
 
 
-
-
     Compositor_Tree::Compositor_Tree( const uint32_t& width,
                                       const uint32_t& height,
                                       std::string tree_file)
-        : W(width), H(height){
+        : W(width), H(height), TreeFile(tree_file){
        // set MPIRank
        MPI_Comm_rank(MPI_COMM_WORLD, &MPIRank);
        MPI_Comm_size(MPI_COMM_WORLD, &MPISize);
-       InfoIndex = MPIRank + 1;
-       // Find send, receive from tree file
-       //tree_file = tree_file + ".csv";
-       tree_file = "../test_tree.csv";
-       TreeFile.open(tree_file);
-       std::string line, csvItem;
-       int lineNum = 0;
-       std::vector<int> temp_content;
-       if(TreeFile.is_open()){
-           while(getline(TreeFile, line)){
-               lineNum++;
-               if(lineNum == InfoIndex){
-                   std:: istringstream myline(line);
-                   while(getline(myline, csvItem, ',')){
-                       std::cout << "csvItem = " << csvItem << std::endl;        
-                       temp_content.push_back(std::stoi(csvItem));
-                   } 
-               }
-           }
-       }
+       
+       //InfoIndex = MPIRank + 1;
+       //// Find send, receive from tree file
+       //TreeFile = TreeFile + ".csv";
+       //std::ifstream f(TreeFile);
+       //std::string line, csvItem;
+       //int lineNum = 0;
+       //std::vector<int> temp_content;
+       //if(f.is_open()){
+           //while(getline(f, line)){
+               //lineNum++;
+               //if(lineNum == InfoIndex){
+                   //std:: istringstream myline(line);
+                   //while(getline(myline, csvItem, ',')){
+                       ////std::cout << "csvItem = " << csvItem << std::endl;        
+                       //temp_content.push_back(std::stoi(csvItem));
+                   //} 
+               //}
+           //}
+       //}
         
-       RECEIVE = temp_content[0];
-       SEND = temp_content[1];
+       //RECEIVE = temp_content[0];
+       //SEND = temp_content[1];
     };
 
     //! function to get final results
@@ -143,102 +176,109 @@ namespace tree {
     //! end frame
     void Compositor_Tree::EndFrame() 
     {
-        //check if the tile is RECEIVE
-        if(SEND != -1){
-            int tile_size[2];
-            float* received_tile;
-            float tile_depth;
-            int tile_region[4];
-            // receive tile size
-            MPI_Recv(tile_size, 2, MPI_INT, RECEIVE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);        
-            //receive tiles from other nodes
-            received_tile = new float(4 * tile_size[0] * tile_size[1]);
-            MPI_Recv(&received_tile, 4*tile_size[0]*tile_size[1], MPI_FLOAT, RECEIVE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            MPI_Recv(&tile_depth, 1, MPI_FLOAT, RECEIVE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            MPI_Recv(tile_region, 4, MPI_INT, RECEIVE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            //!Compose
-            // compute new bounding box
-            int bbox[4];
-            bbox[0] = std::min(tile_region[0], region[0]);
-            bbox[1] = std::max(tile_region[1], region[1]);
-            bbox[2] = std::min(tile_region[2], region[2]);
-            bbox[3] = std::max(tile_region[3], region[3]);
-            // new tile size
-            int out_tilesize[2];
-            out_tilesize[0] = bbox[1] - bbox[0];
-            out_tilesize[1] = bbox[3] - bbox[2];
-            // new composed image buffer
-            output = new float(4 * out_tilesize[0] * out_tilesize[1]);
-            // blend area
-            int blend_area[4];
-            blend_area[0] = std::max(tile_region[0], region[0]);
-            blend_area[1] = std::max(tile_region[1], region[1]);
-            blend_area[2] = std::max(tile_region[2], region[2]);
-            blend_area[3] = std::max(tile_region[3], region[3]);
+        std::ifstream f(TreeFile);
+        int Rank;
+        if(f.is_open()){
+            while(f >> Rank >> SEND >> RECEIVE){
+                if(Rank == MPIRank){
+                    //check if the tile is RECEIVE
+                    if(RECEIVE != -1){
+                        int tile_size[2];
+                        float* received_tile;
+                        float tile_depth;
+                        int tile_region[4];
+                        // receive tile size
+                        MPI_Recv(tile_size, 2, MPI_INT, RECEIVE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);        
+                        //receive tiles from other nodes
+                        received_tile = new float(4 * tile_size[0] * tile_size[1]);
+                        MPI_Recv(&received_tile, 4*tile_size[0]*tile_size[1], MPI_FLOAT, RECEIVE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        MPI_Recv(&tile_depth, 1, MPI_FLOAT, RECEIVE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        MPI_Recv(tile_region, 4, MPI_INT, RECEIVE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        //!Compose
+                        // compute new bounding box
+                        int bbox[4];
+                        bbox[0] = std::min(tile_region[0], region[0]);
+                        bbox[1] = std::max(tile_region[1], region[1]);
+                        bbox[2] = std::min(tile_region[2], region[2]);
+                        bbox[3] = std::max(tile_region[3], region[3]);
+                        // new tile size
+                        int out_tilesize[2];
+                        out_tilesize[0] = bbox[1] - bbox[0];
+                        out_tilesize[1] = bbox[3] - bbox[2];
+                        // new composed image buffer
+                        output = new float(4 * out_tilesize[0] * out_tilesize[1]);
+                        // blend area
+                        int blend_area[4];
+                        blend_area[0] = std::max(tile_region[0], region[0]);
+                        blend_area[1] = std::max(tile_region[1], region[1]);
+                        blend_area[2] = std::max(tile_region[2], region[2]);
+                        blend_area[3] = std::max(tile_region[3], region[3]);
 
-            for(auto i = bbox[0]; i <bbox[1]; ++i){
-                for(auto j = bbox[2]; j < bbox[3]; ++j){
-                    if(i >= blend_area[0] && i <= blend_area[1] && j >= blend_area[2] && j < blend_area[3]){
-                        // this pixel should be compose back to front
-                        int srcIndex, dstIndex;
-                        if(tile_depth > *depth){
-                            // new tile is on the back
-                            srcIndex = ((i - tile_region[0]) + (j - tile_region[2]) * tile_size[0]) * 4;
-                            dstIndex = ((i - region[0]) + (j - region[2]) * tileW) * 4;
-                            float trans = 1.0f - received_tile[srcIndex + 3];
-                            output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 0] = CLAMP(rgba[dstIndex + 0] * trans + received_tile[srcIndex + 0], 0.0f, 1.0f);
-                            output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 1] = CLAMP(rgba[dstIndex + 1] * trans + received_tile[srcIndex + 1], 0.0f, 1.0f);
-                            output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 2] = CLAMP(rgba[dstIndex + 2] * trans + received_tile[srcIndex + 2], 0.0f, 1.0f);
-                            output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 3] = CLAMP(rgba[dstIndex + 3] * trans + received_tile[srcIndex + 3], 0.0f, 1.0f);
-                        }else{
-                            // new tile is on the front  
-                            srcIndex = ((i - region[0]) + (j - region[2]) * tileW) * 4;
-                            dstIndex = ((i - tile_region[0]) + (j - tile_region[2]) * tile_region[0]) * 4;
-                            float trans = 1.0f - rgba[srcIndex + 3];
-                            output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 0] = CLAMP(received_tile[dstIndex + 0] * trans + rgba[srcIndex + 0], 0.0f, 1.0f);
-                            output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 1] = CLAMP(received_tile[dstIndex + 1] * trans + rgba[srcIndex + 1], 0.0f, 1.0f);
-                            output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 2] = CLAMP(received_tile[dstIndex + 2] * trans + rgba[srcIndex + 2], 0.0f, 1.0f);
-                            output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 3] = CLAMP(received_tile[dstIndex + 3] * trans + rgba[srcIndex + 3], 0.0f, 1.0f);
+                        for(auto i = bbox[0]; i <bbox[1]; ++i){
+                            for(auto j = bbox[2]; j < bbox[3]; ++j){
+                                if(i >= blend_area[0] && i <= blend_area[1] && j >= blend_area[2] && j < blend_area[3]){
+                                    // this pixel should be compose back to front
+                                    int srcIndex, dstIndex;
+                                    if(tile_depth > *depth){
+                                        // new tile is on the back
+                                        srcIndex = ((i - tile_region[0]) + (j - tile_region[2]) * tile_size[0]) * 4;
+                                        dstIndex = ((i - region[0]) + (j - region[2]) * tileW) * 4;
+                                        float trans = 1.0f - received_tile[srcIndex + 3];
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 0] = CLAMP(rgba[dstIndex + 0] * trans + received_tile[srcIndex + 0], 0.0f, 1.0f);
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 1] = CLAMP(rgba[dstIndex + 1] * trans + received_tile[srcIndex + 1], 0.0f, 1.0f);
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 2] = CLAMP(rgba[dstIndex + 2] * trans + received_tile[srcIndex + 2], 0.0f, 1.0f);
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 3] = CLAMP(rgba[dstIndex + 3] * trans + received_tile[srcIndex + 3], 0.0f, 1.0f);
+                                    }else{
+                                        // new tile is on the front  
+                                        srcIndex = ((i - region[0]) + (j - region[2]) * tileW) * 4;
+                                        dstIndex = ((i - tile_region[0]) + (j - tile_region[2]) * tile_region[0]) * 4;
+                                        float trans = 1.0f - rgba[srcIndex + 3];
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 0] = CLAMP(received_tile[dstIndex + 0] * trans + rgba[srcIndex + 0], 0.0f, 1.0f);
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 1] = CLAMP(received_tile[dstIndex + 1] * trans + rgba[srcIndex + 1], 0.0f, 1.0f);
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 2] = CLAMP(received_tile[dstIndex + 2] * trans + rgba[srcIndex + 2], 0.0f, 1.0f);
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 3] = CLAMP(received_tile[dstIndex + 3] * trans + rgba[srcIndex + 3], 0.0f, 1.0f);
+                                    }
+                                
+                                }else if(i >= tile_region[0] && i <= tile_region[1] && j >= tile_region[2] && j <= tile_region[3]){
+                                    int srcIndex = ((i - tile_region[0]) + (j - tile_region[2]) * tile_size[0]) * 4;
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 0] = received_tile[srcIndex + 0]; 
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 1] = received_tile[srcIndex + 1]; 
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 2] = received_tile[srcIndex + 2]; 
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 3] = received_tile[srcIndex + 3]; 
+                                }else if(i >= region[0] && i <= region[1] && j >= region[2] && j <= region[3]){
+                                    int srcIndex = ((i - region[0]) + (j - region[2]) * tileW) * 4;
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 0] = rgba[srcIndex + 0]; 
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 1] = rgba[srcIndex + 1]; 
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 2] = rgba[srcIndex + 2]; 
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 3] = rgba[srcIndex + 3]; 
+                                }
+                            }
                         }
-                    
-                    }else if(i >= tile_region[0] && i <= tile_region[1] && j >= tile_region[2] && j <= tile_region[3]){
-                        int srcIndex = ((i - tile_region[0]) + (j - tile_region[2]) * tile_size[0]) * 4;
-                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 0] = received_tile[srcIndex + 0]; 
-                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 1] = received_tile[srcIndex + 1]; 
-                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 2] = received_tile[srcIndex + 2]; 
-                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 3] = received_tile[srcIndex + 3]; 
-                    }else if(i >= region[0] && i <= region[1] && j >= region[2] && j <= region[3]){
-                        int srcIndex = ((i - region[0]) + (j - region[2]) * tileW) * 4;
-                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 0] = rgba[srcIndex + 0]; 
-                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 1] = rgba[srcIndex + 1]; 
-                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 2] = rgba[srcIndex + 2]; 
-                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 3] = rgba[srcIndex + 3]; 
-                    }
+                        // delete pointes and set new composed tile to rgba
+                        rgba = nullptr;
+                        delete received_tile;
+                        rgba = output;
+                        output = nullptr; 
+
+            }else{//send tile to other node
+                //send region
+                MPI_Send(&region, 4, MPI_INT, SEND, MPI_ANY_TAG, MPI_COMM_WORLD);
+                //send depth
+                MPI_Send(&depth, 1, MPI_FLOAT, SEND, MPI_ANY_TAG, MPI_COMM_WORLD);
+                //send rgba 
+                MPI_Send(&rgba, 4*tileW*tileH, MPI_FLOAT, SEND, MPI_ANY_TAG, MPI_COMM_WORLD);
+            }
                 }
             }
-            // delete pointes and set new composed tile to rgba
-            rgba = nullptr;
-            delete received_tile;
-            rgba = output;
-            output = nullptr;
-            
-            InfoIndex = SEND;
-
-        }else{//send tile to other node
-            //send region
-            MPI_Send(&region, 4, MPI_INT, SEND, MPI_ANY_TAG, MPI_COMM_WORLD);
-            //send depth
-            MPI_Send(&depth, 1, MPI_FLOAT, SEND, MPI_ANY_TAG, MPI_COMM_WORLD);
-            //send rgba 
-            MPI_Send(&rgba, 4*tileW*tileH, MPI_FLOAT, SEND, MPI_ANY_TAG, MPI_COMM_WORLD);
         }
+
     };
 
     //! upload tile
     void Compositor_Tree::SetTile(Tile &tile) 
     {
       GetMetaInfo(*(tile.z), MPIRank, MPISize);
-      ExchangeInfo(MPIRank, MPISize);
+      ExchangeInfo(MPIRank, MPISize, TreeFile);
 
         rgba = new float[4 * tile.tileDim[0] * tile.tileDim[1]];
         for(auto i = 0; i < tile.tileSize; ++i){
