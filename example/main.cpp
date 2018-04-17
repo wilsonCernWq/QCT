@@ -7,9 +7,10 @@
 #include "utils/timer.h"
 
 // all the algorithms
-#include "algorithms/Compositor.h"
-#include "algorithms/visit/CompositorVisIt.h"
-#include "algorithms/tree/CompositorTree.h"
+#include "api.h"
+//#include "algorithms/Compositor.h"
+//#include "algorithms/visit/CompositorVisIt.h"
+//#include "algorithms/tree/CompositorTree.h"
 
 #include <unistd.h>
 #include <cstdlib>
@@ -71,16 +72,16 @@ int main(const int ac, const char* av[])
   for (int i = 1; i < ac; ++i) {
     std::string str(av[i]);
     if (str == "-w") {
-      Parse<1>(ac, av, i, CMD::width);
+      Parse<1>(ac, av, i, width);
     }
     else if (str == "-h") {
-      Parse<1>(ac, av, i, CMD::height);
+      Parse<1>(ac, av, i, height);
     }
     else if (str == "-random") {
-      Parse<1>(ac, av, i, CMD::random_size);
+      Parse<1>(ac, av, i, random_size);
     }
     else if (str == "-numPatches") {
-      Parse<1>(ac, av, i, CMD::numPatches);
+      Parse<1>(ac, av, i, numPatches);
     }
   }
 
@@ -101,24 +102,23 @@ int main(const int ac, const char* av[])
   
   //////////////////////////////////////////////////////////////////////////
   // Randomly create images
-  const size_t minX = 0, minY = 0, maxX = CMD::width, maxY = CMD::height;
-  std::vector<Image> imgList(CMD::numPatches);
+  const size_t minX = 0, minY = 0, maxX = width, maxY = height;
+  std::vector<Image> imgList(numPatches);
   for (int i = 0; i < numPatches; ++i) {
-    InitImage(minX, maxX, minY, maxY, mpiRank, imgList[i], 
-              CMD::random_size);
+    InitImage(minX, maxX, minY, maxY, mpiRank, imgList[i], random_size);
   }
   
   //////////////////////////////////////////////////////////////////////////
   // Composition
+  QCT::Init(ac, av);
+
   if (mpiSize == 1) {
 
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
-    QCT::algorithms::visit::Compositor_VisIt
-      visit(QCT::algorithms::visit::Compositor_VisIt::ONENODE,
-            CMD::width, CMD::height);  
+    auto visit = QCT::Create(QCT::ALGO_VISIT_ONE_NODE, width, height);
     clock.Start(); 
-    visit.BeginFrame();
+    QCT::BeginFrame(visit);
     for (int i=0; i<numPatches; i++) {
       /* porting the code into our API */
       float depth = imgList[i].GetDepth();
@@ -131,28 +131,44 @@ int main(const int ac, const char* av[])
                      imgList[i].GetData(),
                      &depth,
                      QCT_TILE_REDUCED_DEPTH);
-      visit.SetTile(tile);
+      QCT::SetTile(visit, tile);
     }    
-    visit.EndFrame();
+    QCT::EndFrame(visit);
     clock.Stop();
     for (int i=0; i<numPatches; i++) {
       imgList[i].DeleteImage();
     }    
     ////////////////////////////////////////////////////////////////////////
     // Timing
-    CreatePPM((float*)visit.MapColorBuffer(),
-              width, height, outputdir);   
+    CreatePPM((float*)QCT::MapColorBuffer(visit),
+              width, height, outputdir);
     std::cout << "[Single Node (VisIt method)] " << clock.GetDuration() 
 	      << " seconds to finish" << std::endl;
   } 
   else {
 
     ////////////////////////////////////////////////////////////////////////
+    // Test Tree Method
+    auto tree = QCT::Create(QCT::ALGO_TREE, width, height);
+    float depth = imgList[0].GetDepth();
+    QCT::Tile tile(imgList[0].GetExtents(0),
+                   imgList[0].GetExtents(2),
+                   imgList[0].GetExtents(1),
+                   imgList[0].GetExtents(3),
+                   width,
+                   height,
+                   imgList[0].GetData(),
+                   &depth,
+                   QCT_TILE_REDUCED_DEPTH);
+    QCT::BeginFrame(tree);
+    QCT::SetTile(tree, tile);
+    QCT::EndFrame(tree);
+    
+#if 0
+    ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
-    QCT::algorithms::visit::Compositor_VisIt
-      visit(QCT::algorithms::visit::Compositor_VisIt::ICET, 
-            CMD::width, CMD::height);  
-    if (visit.IsValid() && numPatches == 1) {
+    auto visit = QCT::Create(QCT::ALGO_VISIT_ICET, width, height);
+    if (QCT::IsValid(visit) && numPatches == 1) {
       clock.Start();
       /* porting the code into our API */
       float depth = imgList[0].GetDepth();
@@ -165,20 +181,22 @@ int main(const int ac, const char* av[])
                      imgList[0].GetData(),
                      &depth,
                      QCT_TILE_REDUCED_DEPTH);
-      visit.BeginFrame();
-      visit.SetTile(tile);
-      visit.EndFrame();
+      QCT::BeginFrame(visit);
+      QCT::SetTile(visit, tile);
+      QCT::EndFrame(visit);
       clock.Stop();
       ////////////////////////////////////////////////////////////////////////
       // Timing
-      CreatePPM((float*)visit.MapColorBuffer(), 
+      CreatePPM((float*)QCT::MapColorBuffer(visit), 
 		width, height, outputdir);
       std::cout << "[Multiple Node (VisIt method)] " << clock.GetDuration() 
 		<< " seconds to finish" << std::endl;
     }
     else {
-      std::cout << "[Multiple Node] Not Implemented" << std::endl;
+        auto tree = QCT::Create(QCT::ALGO_TREE, width, height);
+        std::cout << "[Multiple Node] Not Implemented" << std::endl;
     }
+#endif
 
   }
   
