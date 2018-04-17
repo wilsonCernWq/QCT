@@ -21,7 +21,7 @@ namespace tree {
     float* rgba = nullptr; //save tile before compose
     float* output = nullptr; // output after compose
     float* depth = nullptr;
-    int* MPIRank;
+    int MPIRank;
     int SEND = -1;
     int RECEIVE = -1;
     int InfoIndex;

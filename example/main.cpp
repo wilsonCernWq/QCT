@@ -178,7 +178,8 @@ int main(const int ac, const char* av[])
 		<< " seconds to finish" << std::endl;
     }
     else {
-      std::cout << "[Multiple Node] Not Implemented" << std::endl;
+        auto tree = QCT::Create(QCT::ALGO_TREE, width, height);
+        std::cout << "[Multiple Node] Not Implemented" << std::endl;
     }
 
   }
