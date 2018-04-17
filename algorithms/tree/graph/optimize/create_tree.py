@@ -27,7 +27,7 @@ def pre_processing2(joblist=None, inputfile=None):
         input = []
         total = int(len(joblist) / 3)
         for i in range(total):
-            input.append([joblist[3 * i] + joblist[3 * i + 1] + joblist[3 * i + 2]])
+            input.append([int(joblist[3 * i]) + int(joblist[3 * i + 1]) + float(joblist[3 * i + 2])])
     else:
         return [NodeMap, Groups, RankMap]
     for index, rank in enumerate(input):
