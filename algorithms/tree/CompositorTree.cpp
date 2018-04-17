@@ -28,11 +28,15 @@ namespace tree {
     MPI_Alltoall(&info, sizeof(info), MPI_BYTE,
                  buffer.data(), sizeof(info), MPI_BYTE, 
                  MPI_COMM_WORLD);
+    /* pass stuffs to python */
     if (mpiRank == 0) {
       for (int i = 0; i < mpiSize; ++i) {
-        std::cout << "rack " << buffer[i].rack << " "
-                  << "chassis " << buffer[i].chassis << " "
-                  << "node " << buffer[i].node << " "
+        // std::cout << "rack " << buffer[i].rack << " "
+        //           << "chassis " << buffer[i].chassis << " "
+        //           << "node " << buffer[i].node << " "
+        //           << "depth " << buffer[i].depth << "\n"; 
+        std::cout << "XXX " << buffer[i].rack << " "
+                  << "YYY " << buffer[i].chassis * 10 + buffer[i].node << " "
                   << "depth " << buffer[i].depth << "\n"; 
       }
     }
@@ -89,9 +93,11 @@ namespace tree {
         : W(width), H(height){
        // set MPIRank
        MPI_Comm_rank(MPI_COMM_WORLD, &MPIRank);
+       MPI_Comm_size(MPI_COMM_WORLD, &MPISize);
        InfoIndex = MPIRank + 1;
        // Find send, receive from tree file
-       tree_file = tree_file + ".csv";
+       //tree_file = tree_file + ".csv";
+       tree_file = "../test_tree.csv";
        TreeFile.open(tree_file);
        std::string line, csvItem;
        int lineNum = 0;
@@ -102,8 +108,8 @@ namespace tree {
                if(lineNum == InfoIndex){
                    std:: istringstream myline(line);
                    while(getline(myline, csvItem, ',')){
-                          // std::cout << "csvItem = " << csvItem << std::endl;        
-                   temp_content.push_back(std::stoi(csvItem));
+                       std::cout << "csvItem = " << csvItem << std::endl;        
+                       temp_content.push_back(std::stoi(csvItem));
                    } 
                }
            }
