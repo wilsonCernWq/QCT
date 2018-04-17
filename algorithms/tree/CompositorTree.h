@@ -14,7 +14,7 @@ namespace tree {
 
   class Compositor_Tree : public Compositor {
   private:
-    std::ifstream TreeFile;
+    std::string TreeFile;
     uint32_t W, H;
     uint32_t tileW, tileH;
     int region[4];
