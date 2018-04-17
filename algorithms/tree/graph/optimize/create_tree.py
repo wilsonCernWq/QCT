@@ -24,7 +24,10 @@ def pre_processing2(joblist=None, inputfile=None):
             f_csv = csv.reader(f)
             input = [row for row in f_csv]
     elif joblist is not None:
-        input = joblist
+        input = []
+        total = int(len(joblist)/3)
+        for i in range(total):
+            input.append([joblist[3*i]+ joblist[3*i+1] + joblist[3*i+2]])
     else:
         return [NodeMap, Groups, RankMap]
     for index, rank in enumerate(input):
@@ -239,14 +242,18 @@ def create():
     p.add_argument('-n', '--num', default=64, type=int, dest='num', help='Number of Images')
     # p.add_argument('--csv', help='save as csv file')
     p.add_argument('-o', '--out', help='output file')
-    p.add_argument('-i', '--input', help='input file')
+    p.add_argument('-f', '--file', help='input file')
+    p.add_argument('-i', '--input', nargs='*', help='input string')
+
 
     ns = p.parse_args()
 
     image_num = int(ns.num)
 
     if ns.input is not None:
-        [NodeMap, Groups, RankMap] = pre_processing2(inputfile=ns.input)
+        [NodeMap, Groups, RankMap] = pre_processing2(joblist=ns.input)
+    elif ns.file is not None:
+        [NodeMap, Groups, RankMap] = pre_processing2(inputfile=ns.file)
     else:
         [NodeMap, Groups, RankMap] = pre_processing(image_num)
 
