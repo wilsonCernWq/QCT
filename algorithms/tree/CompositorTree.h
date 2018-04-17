@@ -13,7 +13,7 @@ namespace algorithms {
 namespace tree {
 
   class Compositor_Tree : public Compositor {
-    private:
+  private:
     std::ifstream TreeFile;
     uint32_t W, H;
     uint32_t tileW, tileH;
