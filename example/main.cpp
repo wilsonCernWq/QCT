@@ -117,9 +117,6 @@ int main(const int ac, const char* av[])
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
     auto visit = QCT::Create(QCT::ALGO_VISIT_ONE_NODE, width, height);
-    // QCT::algorithms::visit::Compositor_VisIt
-    //   visit(QCT::algorithms::visit::Compositor_VisIt::ONENODE,
-    //         width, height);  
     clock.Start(); 
     QCT::BeginFrame(visit);
     for (int i=0; i<numPatches; i++) {
@@ -151,6 +148,24 @@ int main(const int ac, const char* av[])
   else {
 
     ////////////////////////////////////////////////////////////////////////
+    // Test Tree Method
+    auto tree = QCT::Create(QCT::ALGO_TREE, width, height);
+    float depth = imgList[0].GetDepth();
+    QCT::Tile tile(imgList[0].GetExtents(0),
+                   imgList[0].GetExtents(2),
+                   imgList[0].GetExtents(1),
+                   imgList[0].GetExtents(3),
+                   width,
+                   height,
+                   imgList[0].GetData(),
+                   &depth,
+                   QCT_TILE_REDUCED_DEPTH);
+    QCT::BeginFrame(tree);
+    QCT::SetTile(tree, tile);
+    QCT::EndFrame(tree);
+    
+#if 0
+    ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
     auto visit = QCT::Create(QCT::ALGO_VISIT_ICET, width, height);
     if (QCT::IsValid(visit) && numPatches == 1) {
@@ -180,6 +195,7 @@ int main(const int ac, const char* av[])
     else {
       std::cout << "[Multiple Node] Not Implemented" << std::endl;
     }
+#endif
 
   }
   

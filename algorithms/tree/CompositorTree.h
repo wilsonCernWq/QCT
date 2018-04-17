@@ -13,7 +13,7 @@ namespace algorithms {
 namespace tree {
 
   class Compositor_Tree : public Compositor {
-    private:
+  private:
     std::ifstream TreeFile;
     uint32_t W, H;
     uint32_t tileW, tileH;
@@ -21,7 +21,10 @@ namespace tree {
     float* rgba = nullptr; //save tile before compose
     float* output = nullptr; // output after compose
     float* depth = nullptr;
-    int* MPIRank;
+
+    int MPIRank;
+    int MPISize;
+
     int SEND = -1;
     int RECEIVE = -1;
     int InfoIndex;
