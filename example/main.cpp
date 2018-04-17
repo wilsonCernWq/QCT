@@ -163,6 +163,9 @@ int main(const int ac, const char* av[])
     QCT::BeginFrame(tree);
     QCT::SetTile(tree, tile);
     QCT::EndFrame(tree);
+    CreatePPM((float*)QCT::MapColorBuffer(tree), width, height, outputdir);
+    std::cout << "[Multiple Node (Tree method)] " << clock.GetDuration() 
+		      << " seconds to finish" << std::endl;
     
 #if 0
     ////////////////////////////////////////////////////////////////////////

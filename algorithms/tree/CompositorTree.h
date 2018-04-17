@@ -22,6 +22,7 @@ namespace tree {
     float* output = nullptr; // output after compose
     float* depth = nullptr;
     int MPIRank;
+    int MPISize;
     int SEND = -1;
     int RECEIVE = -1;
     int InfoIndex;
