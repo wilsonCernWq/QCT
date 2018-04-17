@@ -147,6 +147,7 @@ int main(const int ac, const char* av[])
   } 
   else {
 
+#if 1
     ////////////////////////////////////////////////////////////////////////
     // Test Tree Method
     auto tree = QCT::Create(QCT::ALGO_TREE, width, height);
@@ -167,7 +168,7 @@ int main(const int ac, const char* av[])
     std::cout << "[Multiple Node (Tree method)] " << clock.GetDuration() 
 		      << " seconds to finish" << std::endl;
     
-#if 0
+#else
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
     auto visit = QCT::Create(QCT::ALGO_VISIT_ICET, width, height);
