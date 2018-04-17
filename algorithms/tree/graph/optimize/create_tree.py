@@ -1,4 +1,3 @@
-
 # Used for getting input data from a file or a list
 def parseNode(node):
     # node = {"ID": "C" + '{:03}'.format(rackID) + "-" + '{:02}'.format(halfrackNum) + str(nodeval), "IMG": {}};
@@ -11,6 +10,7 @@ def parseNode(node):
     else:
         return 'C' + node[0] + '-' + node[1]
     # return "C" + '{:03}'.format(rackID) + "-" + '{:02}'.format(halfrackNum) + str(nodeval)
+
 
 def pre_processing2(joblist=None, inputfile=None):
     import csv
@@ -25,9 +25,9 @@ def pre_processing2(joblist=None, inputfile=None):
             input = [row for row in f_csv]
     elif joblist is not None:
         input = []
-        total = int(len(joblist)/3)
+        total = int(len(joblist) / 3)
         for i in range(total):
-            input.append([joblist[3*i]+ joblist[3*i+1] + joblist[3*i+2]])
+            input.append([joblist[3 * i] + joblist[3 * i + 1] + joblist[3 * i + 2]])
     else:
         return [NodeMap, Groups, RankMap]
     for index, rank in enumerate(input):
@@ -43,11 +43,10 @@ def pre_processing2(joblist=None, inputfile=None):
     return [NodeMap, Groups, RankMap]
 
 
-
-
 # Used to create toy data
 
 image_num = 64
+
 
 def addNode(Nodes, nodeval=None, imageDepth=None, halfrackNum=None, rackID=None):  # , input=None):
     node = {"ID": "C" + '{:03}'.format(rackID) + "-" + '{:02}'.format(halfrackNum) + str(nodeval), "IMG": {}};
@@ -56,6 +55,7 @@ def addNode(Nodes, nodeval=None, imageDepth=None, halfrackNum=None, rackID=None)
     Nodes.append(node)
     input.append(['{:03}'.format(rackID), '{:02}'.format(halfrackNum) + str(nodeval), str(imageDepth)])
     return node["ID"]
+
 
 def pre_processing(image_num):
     import random
@@ -115,11 +115,13 @@ def check_rack(NID, base_rack):
     else:
         return False
 
+
 # Find base half rack to send data to
 def find_base(Groups):
     import operator
     base_rack = max(Groups.items(), key=operator.itemgetter(1))[0]
     return base_rack
+
 
 # Calculate Merge Order
 def merge(NodeMap, base_rack):
@@ -190,6 +192,7 @@ def merge(NodeMap, base_rack):
     return mergelist
     # print(len(NodeMap))
 
+
 # Convert to NID to rank_number
 def post(mergelist, RankMap):  # , NodeMap):
     for i in range(len(mergelist[0])):
@@ -234,6 +237,7 @@ def post(mergelist, RankMap):  # , NodeMap):
 
     # return outlist
 
+
 # CLI
 def create():
     import argparse
@@ -244,7 +248,6 @@ def create():
     p.add_argument('-o', '--out', help='output file')
     p.add_argument('-f', '--file', help='input file')
     p.add_argument('-i', '--input', nargs='*', help='input string')
-
 
     ns = p.parse_args()
 
@@ -266,7 +269,7 @@ def create():
     # mlist = post(mergelist,RankMap, NodeMap2)
     post(mergelist, RankMap)
 
-    #print(mergelist)
+    # print(mergelist)
     tlist = list(map(list, zip(*mergelist)))
 
     if ns.out is not None:
