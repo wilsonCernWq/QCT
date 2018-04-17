@@ -5,8 +5,8 @@ def parseNode(node):
     # node["IMG"]["depth"] = imageDepth
     # Nodes.append(node)
     # input.append(['{:03}'.format(rackID), '{:02}'.format(halfrackNum) + str(nodeval), str(imageDepth)])
-    if isinstance(node[0], int):
-        return 'C' + '{:03}'.format(node[0]) + '-' + '{:03}'.format(node[1])
+    if not isinstance(node[0], str):
+        return 'C' + '{:03}'.format(int(node[0])) + '-' + '{:03}'.format(int(node[1]))
     else:
         return 'C' + node[0] + '-' + node[1]
     # return "C" + '{:03}'.format(rackID) + "-" + '{:02}'.format(halfrackNum) + str(nodeval)
@@ -27,7 +27,7 @@ def pre_processing2(joblist=None, inputfile=None):
         input = []
         total = int(len(joblist) / 3)
         for i in range(total):
-            input.append([int(joblist[3 * i]) + int(joblist[3 * i + 1]) + float(joblist[3 * i + 2])])
+            input.append([int(joblist[3 * i]), int(joblist[3 * i + 1]), float(joblist[3 * i + 2])])
     else:
         return [NodeMap, Groups, RankMap]
     for index, rank in enumerate(input):
@@ -131,13 +131,15 @@ def merge(NodeMap, base_rack):
     while len(mykeys) > 1:
         mykeys = list(NodeMap.keys())
         mykeys.sort(key=float)
-        # print(mykeys)
         cur_key = [True] * len(mykeys)
         for index, key in enumerate(mykeys):
+            # print(mergelist)
             if index < len(mykeys) - 1:
-                if str(key) in NodeMap and str(mykeys[index + 1]) in NodeMap:
-                    NID = NodeMap[str(key)]
-                    NID2 = NodeMap[str(mykeys[index + 1])]
+                # print(type(list(NodeMap.keys())[0]))
+                # print(str(mykeys[index]), str(mykeys[index+1]))
+                if mykeys[index] in NodeMap and mykeys[index + 1] in NodeMap:
+                    NID = NodeMap[mykeys[index]]
+                    NID2 = NodeMap[mykeys[index + 1]]
                     if not check_rack(NID, base_rack) and check_rack(NID2, base_rack) and cur_key[index] is True and \
                             cur_key[index + 1] is True:
                         mergelist[0].extend([NID, NID2])
@@ -150,7 +152,9 @@ def merge(NodeMap, base_rack):
                         cur_key[index + 1] = False
                         # print(NID)
 
-                        del NodeMap[str(key)]
+                        del NodeMap[mykeys[index]]
+
+
                     elif check_rack(NID, base_rack) and not check_rack(NID2, base_rack) and cur_key[index] is True and \
                             cur_key[index + 1] is True:
                         mergelist[0].extend([NID, NID2])
@@ -161,7 +165,7 @@ def merge(NodeMap, base_rack):
                         cur_key[index] = False
                         cur_key[index + 1] = False
                         # print(NID2)
-                        del NodeMap[str(mykeys[index + 1])]
+                        del NodeMap[mykeys[index + 1]]
 
         # print(len(NodeMap))
         mykeys = list(NodeMap.keys())
@@ -171,10 +175,10 @@ def merge(NodeMap, base_rack):
         cur_key = [True] * len(mykeys)
         for index, key in enumerate(mykeys):
             if index < len(mykeys) - 1:
-                if str(key) in NodeMap and str(mykeys[index + 1]) in NodeMap:
+                if mykeys[index] in NodeMap and mykeys[index + 1] in NodeMap:
 
-                    NID = NodeMap[str(key)]
-                    NID2 = NodeMap[str(mykeys[index + 1])]
+                    NID = NodeMap[mykeys[index]]
+                    NID2 = NodeMap[mykeys[index + 1]]
                     if check_rack(NID, base_rack) and check_rack(NID2, base_rack) and cur_key[index] is True and \
                             cur_key[
                                 index + 1] is True:
@@ -187,7 +191,7 @@ def merge(NodeMap, base_rack):
                         cur_key[index] = False
                         cur_key[index + 1] = False
                         # print(NID)
-                        del NodeMap[str(key)]
+                        del NodeMap[mykeys[index]]
 
     return mergelist
     # print(len(NodeMap))
@@ -254,7 +258,11 @@ def create():
     image_num = int(ns.num)
 
     if ns.input is not None:
+<<<<<<< HEAD
         print(ns.input);
+=======
+        #print(ns.input)
+>>>>>>> 5f4d56fdb81503be77c5564fd427b00b85c91132
         [NodeMap, Groups, RankMap] = pre_processing2(joblist=ns.input)
     elif ns.file is not None:
         [NodeMap, Groups, RankMap] = pre_processing2(inputfile=ns.file)
