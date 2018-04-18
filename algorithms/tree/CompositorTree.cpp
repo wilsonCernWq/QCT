@@ -105,7 +105,7 @@ namespace tree {
       }
       /* compute filename */
       std::string fname = 
-        std::string(dir) + "/hostname." + std::to_string(mpiRank * 40) + ".txt";
+        std::string(dir) + "/hostname." + std::to_string(mpiRank) + ".txt";
       /* okay we need to read all the files */
       std::ifstream infile(fname.c_str(), std::ifstream::in);
       if (!infile) {
