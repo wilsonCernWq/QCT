@@ -20,6 +20,7 @@
 
 #include <mpi.h>
 
+
 std::string outputdir = "./image.ppm";
 
 void InitImage(int minX, int maxX, int minY, int maxY, int mpiRank, 
@@ -95,6 +96,7 @@ int main(const int ac, const char* av[])
   char hostname[512];
   MPI_Get_processor_name(hostname, &hostnamelen);
 
+  //std::cout << "MPISize = " << mpiSize << std::endl;
   //////////////////////////////////////////////////////////////////////////
   // Initialization
   srand((mpiRank+1)*25*time(NULL)); // random seed
@@ -165,13 +167,13 @@ int main(const int ac, const char* av[])
     QCT::SetTile(tree, tile);
     QCT::EndFrame(tree);
     CreatePPM((float*)QCT::MapColorBuffer(tree), width, height, outputdir);
-    std::cout << "[Multiple Node (Tree method)] " << clock.GetDuration() 
-		      << " seconds to finish" << std::endl;
+    std::cout << "[Multiple Node (Tree method)] " << "finish" << std::endl;
     
 #else
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
     auto visit = QCT::Create(QCT::ALGO_VISIT_ICET, width, height);
+    std::cout << "visit is " << QCT::IsValid(visit) << std::endl;
     if (QCT::IsValid(visit) && numPatches == 1) {
       clock.Start();
       /* porting the code into our API */
@@ -196,10 +198,9 @@ int main(const int ac, const char* av[])
       std::cout << "[Multiple Node (VisIt method)] " << clock.GetDuration() 
 		<< " seconds to finish" << std::endl;
     }
-    else {
-        auto tree = QCT::Create(QCT::ALGO_TREE, width, height);
-        std::cout << "[Multiple Node] Not Implemented" << std::endl;
-    }
+    //else {
+        //auto tree = QCT::Create(QCT::ALGO_TREE, width, height);
+    //}
 #endif
 
   }

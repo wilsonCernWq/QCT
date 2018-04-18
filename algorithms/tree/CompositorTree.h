@@ -18,14 +18,13 @@ namespace tree {
     uint32_t W, H;
     uint32_t tileW, tileH;
     int region[4];
-    float* rgba = nullptr; //save tile before compose
-    float* output = nullptr; // output after compose
-    float* depth = nullptr;
+    float* rgba = nullptr;  //save lastest tile 
+    float* depth = nullptr; // save lastest depth
+    float* output = nullptr; // will delete later
     int MPIRank;
     int MPISize;
     int SEND = -1;
     int RECEIVE = -1;
-    int InfoIndex;
   public:
 
     Compositor_Tree(const uint32_t& width,

@@ -6,6 +6,7 @@
 #include <algorithm>
 
 #define CLAMP(x, l, h) (x > l ? x < h ? x : h : l)
+
 #include <fstream>
 #include <mpi.h>
 #ifdef __linux__ 
@@ -16,33 +17,6 @@
 namespace QCT {
 namespace algorithms {
 namespace tree {
-
-    //inline void GetLineInfo(std::string file, int index, int &send, int &receive){
-
-     //// Find send, receive from tree file
-       //file = file + ".csv";
-       //std::ifstream f(file);
-       //std::string line, csvItem;
-       //int lineNum = 0;
-       //int Rank;
-       //std::vector<int> temp_content;
-       //if(f.is_open()){
-           //while(f >> Rank >> send >> receive){
-               //if(Rank == mpi_rank){
-               //}
-           //}
-           ////while(getline(f, line)){
-               ////lineNum++;
-               ////if(lineNum == InfoIndex){
-                   ////std:: istringstream myline(line);
-                   ////while(getline(myline, csvItem, ',')){
-                       //////std::cout << "csvItem = " << csvItem << std::endl;        
-                       ////temp_content.push_back(std::stoi(csvItem));
-                   ////} 
-               ////}
-           ////}
-       //}
-    //}   
 
   struct MetaInfo {
     uint32_t rack : 16, chassis : 8, node : 8;
@@ -59,24 +33,23 @@ namespace tree {
     command = command + tree_output + " -i ";
 
     /* pass stuffs to python */
-    //if (mpiRank == 0) {
-      for (int i = 0; i < mpiSize; ++i) {
-          command = command + std::to_string(buffer[i].rack) + " "
-                            + std::to_string(buffer[i].chassis) + " "
-                            + std::to_string(buffer[i].depth) + " " ;
+    for (int i = 0; i < mpiSize; ++i) {
+        command = command + std::to_string(buffer[i].rack) + " "
+                          + std::to_string(buffer[i].chassis * 10 + buffer[i].node) + " "
+                          + std::to_string(buffer[i].depth) + " " ;
                         
           
         // std::cout << "rack " << buffer[i].rack << " "
         //           << "chassis " << buffer[i].chassis << " "
         //           << "node " << buffer[i].node << " "
         //           << "depth " << buffer[i].depth << "\n"; 
-        std::cout << "XXX " << buffer[i].rack << " "
-                  << "YYY " << buffer[i].chassis * 10 + buffer[i].node << " "
-                  << "depth " << buffer[i].depth << "\n"; 
+        //std::cout << "XXX " << buffer[i].rack << " "
+                  //<< "YYY " << buffer[i].chassis * 10 + buffer[i].node << " "
+                  //<< "depth " << buffer[i].depth << "\n"; 
       }
       //}
-    std::cout << "debug command = " << std::endl;
-    std::cout << command << std::endl;
+    //std::cout << "debug command = " << std::endl;
+    //std::cout << command << std::endl;
     system(command.c_str());
   }
 
@@ -127,32 +100,13 @@ namespace tree {
                                       const uint32_t& height,
                                       std::string tree_file)
         : W(width), H(height), TreeFile(tree_file){
-       // set MPIRank
+       // set MPIRank and MPISize
        MPI_Comm_rank(MPI_COMM_WORLD, &MPIRank);
        MPI_Comm_size(MPI_COMM_WORLD, &MPISize);
-       //TreeFile = TreeFile + ".csv"; 
-       //InfoIndex = MPIRank + 1;
-       //// Find send, receive from tree file
-       //TreeFile = TreeFile + ".csv";
-       //std::ifstream f(TreeFile);
-       //std::string line, csvItem;
-       //int lineNum = 0;
-       //std::vector<int> temp_content;
-       //if(f.is_open()){
-           //while(getline(f, line)){
-               //lineNum++;
-               //if(lineNum == InfoIndex){
-                   //std:: istringstream myline(line);
-                   //while(getline(myline, csvItem, ',')){
-                       ////std::cout << "csvItem = " << csvItem << std::endl;        
-                       //temp_content.push_back(std::stoi(csvItem));
-                   //} 
-               //}
-           //}
-       //}
-        
-       //RECEIVE = temp_content[0];
-       //SEND = temp_content[1];
+       // BY now, we do not have construct tree graph, 
+       // tree_file is empty
+       // we will broad cast depth in setTile function
+       
     };
 
     //! function to get final results
@@ -166,26 +120,25 @@ namespace tree {
     void Compositor_Tree::Clear(const uint32_t channelFlags) {};
 
     //! status
-    bool Compositor_Tree::IsValid() 
-    {
-        return true;
-    };
+    bool Compositor_Tree::IsValid() { return true; };
 
     //! begin frame
-    void Compositor_Tree::BeginFrame() 
-    {
-    };
+    void Compositor_Tree::BeginFrame() { /*do nothing by now*/ };
   
     //! end frame
     void Compositor_Tree::EndFrame() 
     {
-        TreeFile = TreeFile + ".csv";
+        //TreeFile = TreeFile + ".csv";
+        TreeFile = "../test.txt";
         std::ifstream f(TreeFile);
-        std::cout << f.good() << std::endl;
+       // std::cout << f.good() << std::endl;
         int Rank;
-        if(f.is_open()){
+        if(f.is_open() && f.good()){
+            std::cout << "current rank = " << MPIRank << std::endl;
             while(f >> Rank >> SEND >> RECEIVE){
+                //std::cout << "rank = " << Rank << " send = " << SEND << " receive = " << RECEIVE << std::endl;
                 if(Rank == MPIRank){
+                    std::cout << "send = " << SEND << "  receive = " << RECEIVE << std::endl;
                     //check if the tile is RECEIVE
                     if(RECEIVE != -1){
                         int tile_size[2];
@@ -282,35 +235,30 @@ namespace tree {
     //! upload tile
     void Compositor_Tree::SetTile(Tile &tile) 
     {
+      // broad cast depth to python  
       GetMetaInfo(*(tile.z), MPIRank, MPISize);
       ExchangeInfo(MPIRank, MPISize, TreeFile);
 
-        rgba = new float[4 * tile.tileDim[0] * tile.tileDim[1]];
-        for(auto i = 0; i < tile.tileSize; ++i){
-            rgba[4 * i + 0] = tile.r[i];
-            rgba[4 * i + 1] = tile.g[i];
-            rgba[4 * i + 2] = tile.b[i];
-            rgba[4 * i + 3] = tile.a[i];
-        }
-        // set depth
-        depth = tile.z;
-        tileW = tile.tileDim[0];
-        tileH = tile.tileDim[1];
-        // get tile region
-        /* x0 x1 y0 y1 */
-        region[0] = (int)tile.region[0];
-        region[1] = (int)tile.region[2];
-        region[2] = (int)tile.region[1];
-        region[3] = (int)tile.region[3];
+      rgba = new float[4 * tile.tileDim[0] * tile.tileDim[1]];
+      
+      for(auto i = 0; i < tile.tileSize; ++i){
+          rgba[4 * i + 0] = tile.r[i];
+          rgba[4 * i + 1] = tile.g[i];
+          rgba[4 * i + 2] = tile.b[i];
+          rgba[4 * i + 3] = tile.a[i];
+      }
+      
+      // set depth
+      depth = tile.z;
+      tileW = tile.tileDim[0];
+      tileH = tile.tileDim[1];
+      // get tile region
+      /* x0 x1 y0 y1 */
+      region[0] = (int)tile.region[0];
+      region[1] = (int)tile.region[1];
+      region[2] = (int)tile.region[2];
+      region[3] = (int)tile.region[3];
     
-        // for(auto i = e[0]; i < e[1]; ++i){
-        //     for(auto j = e[2]; j < e[3]; ++j){
-        //         rgba[4 * (i + j * W) + 0] = ptr[4 * ((i - e[0]) + (j - e[2]) * tileDim[1]) + 0];
-        //         rgba[4 * (i + j * W) + 1] = ptr[4 * ((i - e[0]) + (j - e[2]) * tileDim[1]) + 1];
-        //         rgba[4 * (i + j * W) + 2] = ptr[4 * ((i - e[0]) + (j - e[2]) * tileDim[1]) + 2];
-        //         rgba[4 * (i + j * W) + 3] = ptr[4 * ((i - e[0]) + (j - e[2]) * tileDim[1]) + 3];
-        //     }
-        // }
     };
 
     void Compositor_Tree::SetSend(int send)

@@ -258,13 +258,13 @@ def create():
     image_num = int(ns.num)
 
     if ns.input is not None:
-        print(ns.input)
+        #print(ns.input)
         [NodeMap, Groups, RankMap] = pre_processing2(joblist=ns.input)
     elif ns.file is not None:
         [NodeMap, Groups, RankMap] = pre_processing2(inputfile=ns.file)
     else:
         [NodeMap, Groups, RankMap] = pre_processing(image_num)
-    print(Groups)
+    #print(Groups)
     # NodeMap2 = {**NodeMap}
     # print(NodeMap)
     # print(RankMap)
