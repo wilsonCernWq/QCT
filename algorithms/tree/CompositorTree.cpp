@@ -140,18 +140,26 @@ namespace tree {
                 if(Rank == MPIRank){
                     std::cout << "send = " << SEND << "  receive = " << RECEIVE << std::endl;
                     //check if the tile is RECEIVE
-                    if(RECEIVE != -1){
+                    if(RECEIVE != -1 && RECEIVE == -2){
+                        // receive != -1 : this node should receive from SEND
+                        std::cout << "== rank " << MPIRank << " receive from " << "rank " << SEND << std::endl;                         
                         int tile_size[2];
                         float* received_tile;
-                        float tile_depth;
+                        float* tile_depth;
                         int tile_region[4];
                         // receive tile size
-                        MPI_Recv(tile_size, 2, MPI_INT, RECEIVE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);        
-                        //receive tiles from other nodes
-                        received_tile = new float(4 * tile_size[0] * tile_size[1]);
-                        MPI_Recv(&received_tile, 4*tile_size[0]*tile_size[1], MPI_FLOAT, RECEIVE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                        MPI_Recv(&tile_depth, 1, MPI_FLOAT, RECEIVE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                        MPI_Recv(tile_region, 4, MPI_INT, RECEIVE, MPI_ANY_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        MPI_Recv(tile_size, 2, MPI_INT, SEND, 10000, MPI_COMM_WORLD, MPI_STATUS_IGNORE);        
+			            received_tile = new float[4 * tile_size[0] * tile_size[1]];
+                        //receive tiles from other nodes                
+                        MPI_Recv(tile_region, 4, MPI_INT, SEND, 10001, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        MPI_Recv(tile_depth, 1, MPI_FLOAT, SEND, 10002, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        MPI_Recv(received_tile, 4*tile_size[0]*tile_size[1], MPI_FLOAT, SEND, 10003, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        //debug if receive right info
+                        std::cout << "RECEIVE tile size = " << tile_size[0] << " " << tile_size[1] << std::endl;
+                        std::cout << "RECEIVE tile region = " << tile_region[0] << " " << tile_region[2] << std::endl;
+                        std::cout << "RECEIVE depth = " << *tile_depth << std::endl;
+                        std::cout << "RECEIVE rgba = " << received_tile[3] << std::endl;
+                        //std::cout << std::endl;
                         //!Compose
                         // compute new bounding box
                         int bbox[4];
@@ -177,7 +185,7 @@ namespace tree {
                                 if(i >= blend_area[0] && i <= blend_area[1] && j >= blend_area[2] && j < blend_area[3]){
                                     // this pixel should be compose back to front
                                     int srcIndex, dstIndex;
-                                    if(tile_depth > *depth){
+                                    if(*tile_depth > *depth){
                                         // new tile is on the back
                                         srcIndex = ((i - tile_region[0]) + (j - tile_region[2]) * tile_size[0]) * 4;
                                         dstIndex = ((i - region[0]) + (j - region[2]) * tileW) * 4;
@@ -218,16 +226,31 @@ namespace tree {
                         rgba = output;
                         output = nullptr; 
 
-            }else{//send tile to other node
-                //send region
-                MPI_Send(&region, 4, MPI_INT, SEND, MPI_ANY_TAG, MPI_COMM_WORLD);
-                //send depth
-                MPI_Send(&depth, 1, MPI_FLOAT, SEND, MPI_ANY_TAG, MPI_COMM_WORLD);
-                //send rgba 
-                MPI_Send(&rgba, 4*tileW*tileH, MPI_FLOAT, SEND, MPI_ANY_TAG, MPI_COMM_WORLD);
             }
-                }
+            
+            
+            else{//send tile to other node
+
+                std::cout << "== rank " << MPIRank << " send to rank " << SEND << std::endl;
+               // send tile size
+               int tile_size[2]; tile_size[0] = tileW; tile_size[1] = tileH;
+               std::cout << "SEND tile size = " << tile_size[0] << " " << tile_size[1] << std::endl;
+               std::cout << "SEND tile region = " << region[0] << " " << region[2] << std::endl;
+               std::cout << "SEND depth = " << *depth << " " << std::endl;
+               std::cout << "SEND rgba = " << rgba[3] << std::endl;
+               
+               //std::cout << std::endl;
+               MPI_Send(tile_size, 2, MPI_INT, SEND, 10000, MPI_COMM_WORLD);
+               //send region
+               MPI_Send(region, 4, MPI_INT, SEND, 10001, MPI_COMM_WORLD);
+               //send depth
+               MPI_Send(depth, 1, MPI_FLOAT, SEND, 10002, MPI_COMM_WORLD);
+               //send rgba 
+               MPI_Send(rgba, 4*tileW*tileH, MPI_FLOAT, SEND, 10003, MPI_COMM_WORLD);
             }
+
+                }// end of check Rank == MPIRank
+            } // end of while (go through all lines)
         }
 
     };
