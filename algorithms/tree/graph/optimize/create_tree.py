@@ -264,7 +264,7 @@ def create():
         [NodeMap, Groups, RankMap] = pre_processing2(inputfile=ns.file)
     else:
         [NodeMap, Groups, RankMap] = pre_processing(image_num)
-
+    print(Groups)
     # NodeMap2 = {**NodeMap}
     # print(NodeMap)
     # print(RankMap)
