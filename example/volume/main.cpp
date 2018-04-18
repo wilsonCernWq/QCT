@@ -1,11 +1,20 @@
 /*! This is a real example for rendering dummy volume using
- * how we should use our library 
- */
+ * how we should use our library */
 #include "utils/commandline.h"
 #include "utils/utilities.h"
 #include "utils/color.h"
 #include "utils/image.h"
 #include "utils/timer.h"
+
+#if defined(_OPENMP)
+# include <omp.h>
+#endif
+
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#include "ospray/ospray.h"
 
 #include <iostream>
 #include <string>
@@ -17,15 +26,8 @@
 #include <algorithm>  // c++11
 #include <functional> // c++11
 
-#if defined(_OPENMP)
-# include <omp.h>
-#endif
-
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtc/type_ptr.hpp>
-
-#include "ospray/ospray.h"
+// all the algorithms
+#include "api.h"
 
 #ifndef EXIT_SUCCESS
 #define EXIT_SUCCESS 0
