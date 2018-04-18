@@ -209,8 +209,10 @@ def post(mergelist, RankMap):  # , NodeMap):
 
     for index, item in enumerate(mergelist[2]):
         if item == -2 and index + 1 < len(mergelist[0]):
-            ind = mergelist[0][index + 1::].index(mergelist[0][index])
-            mergelist[2][index] = ind + index + 1
+
+            if mergelist[0][index] in mergelist[0][index + 1::]:
+                ind = mergelist[0][index + 1::].index(mergelist[0][index])
+                mergelist[2][index] = ind + index + 1
 
         # elif item == -2 and index % 2 == 0 and index+1<len(mergelist[0]):
         #    ind = mergelist[0][index+1::].index(item)
@@ -276,12 +278,20 @@ def create():
 
     # print(mergelist)
     tlist = list(map(list, zip(*mergelist)))
+    #flat_list = [item for sublist in tlist for item in sublist]
 
     if ns.out is not None:
-        filename = "{}.csv".format(ns.out)
-        with open(filename, "w", newline='') as f:
-            writer = csv.writer(f)
-            writer.writerows(tlist)
+        #ilename2 = "{}.csv".format(ns.out)
+        #with open(filename2, "w", newline='') as f:
+        #    writer = csv.writer(f)
+        #    writer.writerows(tlist)
+
+        filename = "{}.txt".format(ns.out)
+        with open(filename, "w") as myfile:
+            for c in tlist:
+                for item in c:
+                    myfile.write("%s " % item)
+                myfile.write("\n")
 
 
 if __name__ == '__main__':
