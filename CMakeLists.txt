@@ -6,8 +6,18 @@ project(QCT VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_CXX_FLAGS_RELEASE "-DNDEBUG")
 
 # ┌──────────────────────────────────────────────────────────────────┐
+# │  Options                                                         │
+# └──────────────────────────────────────────────────────────────────┘
+option(BUILD_EXAMPLE_SIMPLE "Build simple example" ON)
+option(BUILD_EXAMPLE_VOLUME "Build volume rendering example" OFF)
+
+# ┌──────────────────────────────────────────────────────────────────┐
 # │  Load libraries                                                  │
 # └──────────────────────────────────────────────────────────────────┘
+if (BUILD_EXAMPLE_VOLUME)
+  set(IMPORT_GLM ON)
+  set(IMPORT_OSPRAY ON)
+endif ()
 include(cmake/packages.cmake)
 
 # ┌──────────────────────────────────────────────────────────────────┐
