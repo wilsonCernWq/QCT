@@ -55,7 +55,7 @@ namespace tree {
     MPI_Alltoall(&info, sizeof(info), MPI_BYTE,
                  buffer.data(), sizeof(info), MPI_BYTE, 
                  MPI_COMM_WORLD);
-    std::string command = "python3 ../algorithm/tree/graph/optimize/create_tree.py -o ";
+    std::string command = "python3 ../algorithms/tree/graph/optimize/create_tree.py -o ";
     command = command + tree_output + " -i ";
 
     /* pass stuffs to python */
@@ -75,6 +75,9 @@ namespace tree {
                   << "depth " << buffer[i].depth << "\n"; 
       }
     }
+    std::cout << "debug command = " << std::endl;
+    std::cout << command << std::endl;
+    system(command.c_str());
   }
 
   void GetMetaInfo(const float &z, const int mpiRank, const int mpiSize)
@@ -127,7 +130,7 @@ namespace tree {
        // set MPIRank
        MPI_Comm_rank(MPI_COMM_WORLD, &MPIRank);
        MPI_Comm_size(MPI_COMM_WORLD, &MPISize);
-       
+       //TreeFile = TreeFile + ".csv"; 
        //InfoIndex = MPIRank + 1;
        //// Find send, receive from tree file
        //TreeFile = TreeFile + ".csv";
@@ -176,7 +179,9 @@ namespace tree {
     //! end frame
     void Compositor_Tree::EndFrame() 
     {
+        TreeFile = TreeFile + ".csv";
         std::ifstream f(TreeFile);
+        std::cout << f.good() << std::endl;
         int Rank;
         if(f.is_open()){
             while(f >> Rank >> SEND >> RECEIVE){
