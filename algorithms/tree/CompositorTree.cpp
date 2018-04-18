@@ -52,14 +52,14 @@ namespace tree {
   
   void ExchangeInfo(const int mpiRank, const int mpiSize, std::string tree_output) {
     std::vector<MetaInfo> buffer(mpiSize);
-    MPI_Alltoall(&info, sizeof(info), MPI_BYTE,
-                 buffer.data(), sizeof(info), MPI_BYTE, 
-                 MPI_COMM_WORLD);
+    MPI_Allgather(&info, sizeof(info), MPI_BYTE,
+                  buffer.data(), sizeof(info), MPI_BYTE, 
+                  MPI_COMM_WORLD);
     std::string command = "python3 ../algorithms/tree/graph/optimize/create_tree.py -o ";
     command = command + tree_output + " -i ";
 
     /* pass stuffs to python */
-    if (mpiRank == 0) {
+    //if (mpiRank == 0) {
       for (int i = 0; i < mpiSize; ++i) {
           command = command + std::to_string(buffer[i].rack) + " "
                             + std::to_string(buffer[i].chassis) + " "
@@ -74,7 +74,7 @@ namespace tree {
                   << "YYY " << buffer[i].chassis * 10 + buffer[i].node << " "
                   << "depth " << buffer[i].depth << "\n"; 
       }
-    }
+      //}
     std::cout << "debug command = " << std::endl;
     std::cout << command << std::endl;
     system(command.c_str());
