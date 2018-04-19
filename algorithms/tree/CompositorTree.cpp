@@ -14,25 +14,101 @@
 # include <limits.h>
 #endif
 
-// #define CLAMP(x, l, h) (x > l ? x < h ? x : h : l)
-// void CreatePPM(const float * image, int dimX, int dimY, 
-//                const std::string& filename)
-// {
-//   std::ofstream outputFile(filename.c_str(), std::ios::out | std::ios::binary);
-//   outputFile <<  "P6\n" << dimX << "\n" << dimY << "\n" << 255 << "\n";    
-//   for (int y=0; y<dimY; ++y) {
-//     for (int x=0; x<dimX; ++x) {
-//       int index = (y * dimX + x) * 4;            
-//       char color[3];
-//       color[0] = std::min(image[index + 0] , 1.0f) * 255;  // red
-//       color[1] = std::min(image[index + 1] , 1.0f) * 255;  // green 
-//       color[2] = std::min(image[index + 2] , 1.0f) * 255;  // blue
-//       outputFile.write(color,3);
-//     }
-//   }    
-//   outputFile.close();
-// }
-
+#if QCT_ALGO_TREE_USE_SOA
+bool InTile(const QCT::Tile tile, const int x, const int y) 
+{
+  /* x0 x1 y0 y1 */
+  return 
+    (tile.region[0] <= x && tile.region[2] > x) && 
+    (tile.region[1] <= y && tile.region[3] > y);
+}
+void Place(const QCT::Tile& tile,
+           const uint32_t oSize[2],
+           float*         oRGBA)
+{
+  for (auto i = tile.region[0]; i < tile.region[2]; ++i) {
+    for (auto j = tile.region[1]; j < tile.region[3]; ++j) {
+      const auto iIdx = 
+        ((i - tile.region[0]) + (j - tile.region[1]) * tile.tileDim[0]);
+      const auto oIdx = (i + j * oSize[0]) * 4;
+      oRGBA[oIdx + 0] = tile.r[iIdx];
+      oRGBA[oIdx + 1] = tile.g[iIdx];
+      oRGBA[oIdx + 2] = tile.b[iIdx];
+      oRGBA[oIdx + 3] = tile.a[iIdx];
+    }
+  }
+}
+void Blend(const QCT::Tile& fTile,
+           const QCT::Tile& bTile,
+           QCT::Tile&       oTile)
+{
+  for (auto i = oTile.region[0]; i < oTile.region[2]; ++i) {  /* x0 x1 */
+    for (auto j = oTile.region[1]; j < oTile.region[3]; ++j) { /* y0 y1 */
+      if (InTile(fTile, i, j) && InTile(bTile, i, j)) {
+        const auto fIdx = 
+          ((i-fTile.region[0]) + (j-fTile.region[1]) * fTile.tileDim[0]);
+        const auto bIdx = 
+          ((i-bTile.region[0]) + (j-bTile.region[1]) * bTile.tileDim[0]);
+        const auto oIdx = 
+          ((i-oTile.region[0]) + (j-oTile.region[1]) * oTile.tileDim[0]);
+        const auto t = 1.f - fTile.a[fIdx];
+        oTile.r[oIdx] =
+          std::clamp(bTile.r[bIdx] * t + fTile.r[fIdx], 0.0f, 1.0f);
+        oTile.g[oIdx] = 
+          std::clamp(bTile.g[bIdx] * t + fTile.g[fIdx], 0.0f, 1.0f);
+        oTile.b[oIdx] = 
+          std::clamp(bTile.b[bIdx] * t + fTile.b[fIdx], 0.0f, 1.0f);
+        oTile.a[oIdx] = 
+          std::clamp(bTile.a[bIdx] * t + fTile.a[fIdx], 0.0f, 1.0f);
+      } else if (InTile(fTile, i, j)) {
+        const auto fIdx = 
+          ((i-fTile.region[0]) + (j-fTile.region[1]) * fTile.tileDim[0]);
+        const auto oIdx = 
+          ((i-oTile.region[0]) + (j-oTile.region[1]) * oTile.tileDim[0]);
+        oTile.r[oIdx] = fTile.r[fIdx];
+        oTile.g[oIdx] = fTile.g[fIdx];
+        oTile.b[oIdx] = fTile.b[fIdx];
+        oTile.a[oIdx] = fTile.a[fIdx];
+      } else if (InTile(bTile, i, j)) {
+        const auto bIdx = 
+          ((i-bTile.region[0]) + (j-bTile.region[1]) * bTile.tileDim[0]);
+        const auto oIdx = 
+          ((i-oTile.region[0]) + (j-oTile.region[1]) * oTile.tileDim[0]);
+        oTile.r[oIdx] = bTile.r[bIdx];
+        oTile.g[oIdx] = bTile.g[bIdx];
+        oTile.b[oIdx] = bTile.b[bIdx];
+        oTile.a[oIdx] = bTile.a[bIdx];
+      } else {
+        const auto oIdx = 
+          ((i-oTile.region[0]) + (j-oTile.region[1]) * oTile.tileDim[0]);
+        oTile.r[oIdx] = 0.f;
+        oTile.g[oIdx] = 0.f;
+        oTile.b[oIdx] = 0.f;
+        oTile.a[oIdx] = 0.f;
+      }
+    }
+  }
+}
+void CreatePPM(const float *r, const float *g, const float *b, 
+               const int dimX, const int dimY, 
+               const std::string& filename)
+{
+  std::ofstream outputFile(filename.c_str(), 
+                           std::ios::out | std::ios::binary);
+  outputFile <<  "P6\n" << dimX << "\n" << dimY << "\n" << 255 << "\n";    
+  for (int y=0; y<dimY; ++y) {
+    for (int x=0; x<dimX; ++x) {
+      int index = (y * dimX + x);
+      char color[3];
+      color[0] = std::min(r[index] , 1.0f) * 255;  // red
+      color[1] = std::min(g[index] , 1.0f) * 255;  // green 
+      color[2] = std::min(b[index] , 1.0f) * 255;  // blue
+      outputFile.write(color,3);
+    }
+  }    
+  outputFile.close();
+}
+#else
 bool InRegion(const int region[4], const int x, const int y) 
 {
   /* x0 x1 y0 y1 */
@@ -70,30 +146,34 @@ void Blend(const int    fSize[2],
   for (int i = oRegion[0]; i < oRegion[1]; ++i) {
     for (int j = oRegion[2]; j < oRegion[3]; ++j) {
       if (InRegion(fRegion, i, j) && InRegion(bRegion, i, j)) {
-        const int fIdx = ((i - fRegion[0]) + (j - fRegion[2]) * fSize[0]) * 4;
-        const int bIdx = ((i - bRegion[0]) + (j - bRegion[2]) * bSize[0]) * 4;
-        const int oIdx = ((i - oRegion[0]) + (j - oRegion[2]) * oSize[0]) * 4;
+        const int fIdx = ((i-fRegion[0]) + (j-fRegion[2]) * fSize[0]) * 4;
+        const int bIdx = ((i-bRegion[0]) + (j-bRegion[2]) * bSize[0]) * 4;
+        const int oIdx = ((i-oRegion[0]) + (j-oRegion[2]) * oSize[0]) * 4;
         const float t = 1.f - fRGBA[fIdx + 3];
-        oRGBA[oIdx + 0] = std::clamp(bRGBA[bIdx + 0] * t + fRGBA[fIdx + 0], 0.0f, 1.0f);
-        oRGBA[oIdx + 1] = std::clamp(bRGBA[bIdx + 1] * t + fRGBA[fIdx + 1], 0.0f, 1.0f);
-        oRGBA[oIdx + 2] = std::clamp(bRGBA[bIdx + 2] * t + fRGBA[fIdx + 2], 0.0f, 1.0f);
-        oRGBA[oIdx + 3] = std::clamp(bRGBA[bIdx + 3] * t + fRGBA[fIdx + 3], 0.0f, 1.0f);
+        oRGBA[oIdx + 0] = std::clamp(bRGBA[bIdx+0] * t + fRGBA[fIdx+0],
+                                     0.0f, 1.0f);
+        oRGBA[oIdx + 1] = std::clamp(bRGBA[bIdx+1] * t + fRGBA[fIdx+1],
+                                     0.0f, 1.0f);
+        oRGBA[oIdx + 2] = std::clamp(bRGBA[bIdx+2] * t + fRGBA[fIdx+2],
+                                     0.0f, 1.0f);
+        oRGBA[oIdx + 3] = std::clamp(bRGBA[bIdx+3] * t + fRGBA[fIdx+3],
+                                     0.0f, 1.0f);
       } else if (InRegion(fRegion, i, j)) {    
-        const int fIdx = ((i - fRegion[0]) + (j - fRegion[2]) * fSize[0]) * 4;
-        const int oIdx = ((i - oRegion[0]) + (j - oRegion[2]) * oSize[0]) * 4;
+        const int fIdx = ((i-fRegion[0]) + (j-fRegion[2]) * fSize[0]) * 4;
+        const int oIdx = ((i-oRegion[0]) + (j-oRegion[2]) * oSize[0]) * 4;
         oRGBA[oIdx + 0] = fRGBA[fIdx + 0];
         oRGBA[oIdx + 1] = fRGBA[fIdx + 1];
         oRGBA[oIdx + 2] = fRGBA[fIdx + 2];
         oRGBA[oIdx + 3] = fRGBA[fIdx + 3];
       } else if (InRegion(bRegion, i, j)) {
-        const int bIdx = ((i - bRegion[0]) + (j - bRegion[2]) * bSize[0]) * 4;
-        const int oIdx = ((i - oRegion[0]) + (j - oRegion[2]) * oSize[0]) * 4;
+        const int bIdx = ((i-bRegion[0]) + (j-bRegion[2]) * bSize[0]) * 4;
+        const int oIdx = ((i-oRegion[0]) + (j-oRegion[2]) * oSize[0]) * 4;
         oRGBA[oIdx + 0] = bRGBA[bIdx + 0];
         oRGBA[oIdx + 1] = bRGBA[bIdx + 1];
         oRGBA[oIdx + 2] = bRGBA[bIdx + 2];
         oRGBA[oIdx + 3] = bRGBA[bIdx + 3];
       } else {
-        const int oIdx = ((i - oRegion[0]) + (j - oRegion[2]) * oSize[0]) * 4;
+        const int oIdx = ((i-oRegion[0]) + (j-oRegion[2]) * oSize[0]) * 4;
         oRGBA[oIdx + 0] = 0.f;
         oRGBA[oIdx + 1] = 0.f;
         oRGBA[oIdx + 2] = 0.f;
@@ -102,80 +182,99 @@ void Blend(const int    fSize[2],
     }
   }
 }
+void CreatePPM(const float * image, int dimX, int dimY, 
+               const std::string& filename)
+{
+  std::ofstream outputFile(filename.c_str(), 
+                           std::ios::out | std::ios::binary);
+  outputFile <<  "P6\n" << dimX << "\n" << dimY << "\n" << 255 << "\n";    
+  for (int y=0; y<dimY; ++y) {
+    for (int x=0; x<dimX; ++x) {
+      int index = (y * dimX + x) * 4;            
+      char color[3];
+      color[0] = std::min(image[index + 0] , 1.0f) * 255;  // red
+      color[1] = std::min(image[index + 1] , 1.0f) * 255;  // green 
+      color[2] = std::min(image[index + 2] , 1.0f) * 255;  // blue
+      outputFile.write(color,3);
+    }
+  }    
+  outputFile.close();
+}
+#endif
 
+// std::string filename;
 #define TREE_FILE "./tree"
+
+struct MetaInfo {
+  uint32_t rack : 16, chassis : 8, node : 8;
+  float depth;
+};
+static MetaInfo info;
+  
+void ExchangeInfo(const int mpiRank, const int mpiSize) {
+  std::vector<MetaInfo> buffer(mpiSize);
+  MPI_Allgather(&info, sizeof(info), MPI_BYTE,
+                buffer.data(), sizeof(info), MPI_BYTE, 
+                MPI_COMM_WORLD);
+  /* pass stuffs to python */
+  std::string command;
+  command += "python3 ../algorithms/tree/graph/optimize/create_tree.py ";
+  command += " -o " + (TREE_FILE + std::to_string(mpiRank));
+  command += " -i ";
+  for (int i = 0; i < mpiSize; ++i) {
+    command += 
+      std::to_string(buffer[i].rack) + " " +
+      std::to_string(buffer[i].chassis * 10 + buffer[i].node) + " " +
+      std::to_string(buffer[i].depth) + " " ;
+  }
+  system(command.c_str());
+}
+
+void GetMetaInfo(const float &z, const int mpiRank, const int mpiSize)
+{
+  /** first we check if we are on stampede2 
+   *   --> check if TACC_SYSTEM=stampede2 */
+  bool onStampede2 = false;
+  if (const char* tacc = std::getenv("TACC_SYSTEM")) {
+    if (std::string(tacc) == "stampede2") {  onStampede2 = true; }
+  }
+  /* retrieve meta info  */
+  std::string hname;
+  if (onStampede2) {
+    /* we need to read from hostname */
+    char hostname[35]; gethostname(hostname, 35);
+    hname = std::string(hostname);      
+  } else {
+    /* we need to read simulated hostnames from files */
+    /* where are the files */
+    const char* dir;
+    if (!(dir = std::getenv("HOSTNAME_FILES"))) {
+      throw std::runtime_error("please define environmental variable "
+                               "'HOSTNAME_FILES' indicating the directory "
+                               "of all the hostnames files");      
+    }
+    /* compute filename */
+    std::string fname = 
+      std::string(dir) + "/hostname." + std::to_string(mpiRank) + ".txt";
+    /* okay we need to read all the files */
+    std::ifstream infile(fname.c_str(), std::ifstream::in);
+    if (!infile) {
+      throw std::runtime_error(("unable to open file " + fname).c_str());
+    }      
+    if (!std::getline(infile, hname)) { // process the first line
+      throw std::runtime_error(("empty file " + fname).c_str());
+    }
+  }
+  /* construct meta info */ 
+  info.rack = std::stoi(hname.substr(1,3));
+  info.chassis = std::stoi(hname.substr(5,2));
+  info.node = std::stoi(hname.substr(7,1));
+  info.depth = z;    
+}
 
 namespace QCT {
 namespace algorithms {
 namespace tree {
-
-  struct MetaInfo {
-    uint32_t rack : 16, chassis : 8, node : 8;
-    float depth;
-  };
-  static MetaInfo info;
-  
-  void ExchangeInfo(const int mpiRank, const int mpiSize) {
-    std::vector<MetaInfo> buffer(mpiSize);
-    MPI_Allgather(&info, sizeof(info), MPI_BYTE,
-                  buffer.data(), sizeof(info), MPI_BYTE, 
-                  MPI_COMM_WORLD);
-    /* pass stuffs to python */
-    std::string command;
-    command += "python3 ../algorithms/tree/graph/optimize/create_tree.py ";
-    command += " -o " + (TREE_FILE + std::to_string(mpiRank));
-    command += " -i ";
-    for (int i = 0; i < mpiSize; ++i) {
-      command += 
-        std::to_string(buffer[i].rack) + " " +
-        std::to_string(buffer[i].chassis * 10 + buffer[i].node) + " " +
-        std::to_string(buffer[i].depth) + " " ;
-    }
-    system(command.c_str());
-  }
-
-  void GetMetaInfo(const float &z, const int mpiRank, const int mpiSize)
-  {
-    /** first we check if we are on stampede2 
-     *   --> check if TACC_SYSTEM=stampede2 */
-    bool onStampede2 = false;
-    if (const char* tacc = std::getenv("TACC_SYSTEM")) {
-      if (std::string(tacc) == "stampede2") {  onStampede2 = true; }
-    }
-    /* retrieve meta info  */
-    std::string hname;
-    if (onStampede2) {
-      /* we need to read from hostname */
-      char hostname[35]; gethostname(hostname, 35);
-      hname = std::string(hostname);      
-    } else {
-      /* we need to read simulated hostnames from files */
-      /* where are the files */
-      const char* dir;
-      if (!(dir = std::getenv("HOSTNAME_FILES"))) {
-        throw std::runtime_error("please define environmental variable "
-                                 "'HOSTNAME_FILES' indicating the directory "
-                                 "of all the hostnames files");      
-      }
-      /* compute filename */
-      std::string fname = 
-        std::string(dir) + "/hostname." + std::to_string(mpiRank) + ".txt";
-      /* okay we need to read all the files */
-      std::ifstream infile(fname.c_str(), std::ifstream::in);
-      if (!infile) {
-        throw std::runtime_error(("unable to open file " + fname).c_str());
-      }      
-      if (!std::getline(infile, hname)) { // process the first line
-        throw std::runtime_error(("empty file " + fname).c_str());
-      }
-    }
-    /* construct meta info */ 
-    info.rack = std::stoi(hname.substr(1,3));
-    info.chassis = std::stoi(hname.substr(5,2));
-    info.node = std::stoi(hname.substr(7,1));
-    info.depth = z;    
-  }
-
 
   Compositor_Tree::Compositor_Tree(const uint32_t& width,
                                    const uint32_t& height)
@@ -191,8 +290,6 @@ namespace tree {
   const void *Compositor_Tree::MapColorBuffer() { return finalRGBA; };
   void Compositor_Tree::Unmap(const void *mappedMem) {};
 
-  int Compositor_Tree::GetParRank () { return MPIRank; };
-
   //! clear (the specified channels of) this frame buffer
   void Compositor_Tree::Clear(const uint32_t channelFlags) {};
 
@@ -207,42 +304,62 @@ namespace tree {
   {
     std::ifstream f(TREE_FILE + std::to_string(mpiRank) + ".txt");
     if (f.is_open() && f.good()) {
-      // std::cout << "current rank = " << MPIRank << std::endl;
-
       int idx;
       while (f >> idx >> target >> action) {
       if (idx == MPIRank) {
-
-        // std::cout << "rank " << MPIRank 
-        //           << " action " << action 
-        //           << " target " << target << std::endl;
-
         if (action == -1) { // send tile to other node
-          // std::cout << "SEND == from " << MPIRank << " to " << target << std::endl;
-
-          // // DEBUG
-          // std::cout << "SEND tile size   = " 
-          //           << tileSize[0] << " " << tileSize[1] << std::endl;
-          // std::cout << "SEND tile region = " 
-          //           << tileRegion[0] << " " 
-          //           << tileRegion[1] << " " 
-          //           << tileRegion[2] << " " 
-          //           << tileRegion[3] << std::endl;
-          // std::cout << "SEND tile depth = "  << tileDepth << " " << std::endl;
-
-          // send data
+          /* pass meta data */
+#if QCT_ALGO_TREE_USE_SOA
+          MPI_Send(&tile, sizeof(tile), MPI_BYTE,
+                   target, 30000, MPI_COMM_WORLD);
+          MPI_Send(tile.rgba, 4 * tile.tileSize, MPI_FLOAT,
+                   target, 30001, MPI_COMM_WORLD);
+          MPI_Send(tile.z, 1, MPI_FLOAT,
+                   target, 30005, MPI_COMM_WORLD);
+#else
           MPI_Send( tileSize,   2, MPI_INT, target, 10000, MPI_COMM_WORLD);
           MPI_Send( tileRegion, 4, MPI_INT, target, 10001, MPI_COMM_WORLD);
           MPI_Send(&tileDepth,  1, MPI_FLOAT, target, 10002, MPI_COMM_WORLD);
           MPI_Send( tileRGBA,   4 * tileSize[0] * tileSize[1], MPI_FLOAT, 
                     target, 10003, MPI_COMM_WORLD);
-
+#endif
         } else if (action != -1) { // receive a tile from target
-          // std::cout << "RECV == at " << MPIRank 
-          //           << " receive from " << target << std::endl;
-          // std::string filename;
-
-          // receive data
+#if QCT_ALGO_TREE_USE_SOA
+          /* recv meda data */
+          Tile recv;
+          MPI_Recv(&recv, sizeof(recv), MPI_BYTE, 
+                   target, 30000, MPI_COMM_WORLD,
+                   MPI_STATUS_IGNORE);
+          recv.Allocate();
+          MPI_Recv(recv.rgba, 4 * recv.tileSize, MPI_FLOAT, 
+                   target, 30001, MPI_COMM_WORLD,
+                   MPI_STATUS_IGNORE);
+          MPI_Recv(recv.z, 1, MPI_FLOAT, 
+                   target, 30005, MPI_COMM_WORLD,
+                   MPI_STATUS_IGNORE);
+          /* now we compose two tiles together */
+          const std::array<uint32_t, 4> composedRegion {
+            std::min(tile.region[0], recv.region[0]),
+            std::min(tile.region[1], recv.region[1]),
+            std::max(tile.region[2], recv.region[2]),
+            std::max(tile.region[3], recv.region[3])
+          };
+          const std::array<uint32_t, 2> composedDim {
+            finalSize[0], finalSize[1]
+          };
+          Tile composed(composedRegion, composedDim, QCT_TILE_REDUCED_DEPTH);
+          composed.Allocate();
+          *(composed.z) = std::min(*(tile.z), *(recv.z));
+          if (*(tile.z) > *(recv.z)) {
+            Blend(recv, tile, composed);
+          } else {
+            Blend(tile, recv, composed);
+          }
+          recv.Clean();
+          tile.Clean();
+          tile = composed;
+#else
+          /* recv meda data */
           int    recvSize[2];
           int    recvRegion[4];
           float* recvRGBA;
@@ -256,29 +373,6 @@ namespace tree {
                    MPI_COMM_WORLD, MPI_STATUS_IGNORE);
           MPI_Recv( recvRGBA,   4 * recvSize[0] * recvSize[1], MPI_FLOAT,
                     target, 10003, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-
-          // // DEBUG
-          // std::cout << "RECV tile size   = " 
-          //           << recvSize[0] << " " << recvSize[1] << std::endl;
-          // std::cout << "RECV tile region = " 
-          //           << recvRegion[0] << " " 
-          //           << recvRegion[1] << " "
-          //           << recvRegion[2] << " "
-          //           << recvRegion[3] << std::endl;
-          // std::cout << "RECV tile depth = " << recvDepth <<  std::endl;
-          // std::cout << "RECV OWNS tile size = "
-          //           << tileSize[0] << " " << tileSize[1] << std::endl;
-          // std::cout << "RECV OWNS tile region = " 
-          //           << tileRegion[0] << " "
-          //           << tileRegion[1] << " "
-          //           << tileRegion[2] << " " 
-          //           << tileRegion[3] << std::endl;
-          // std::cout << "RECV OWNS tile depth = " << tileDepth <<  std::endl;
-          // filename = "./recv_from_" + 
-          //   std::to_string(target) + "_to_" + 
-          //   std::to_string(MPIRank) + ".ppm";
-          // CreatePPM(recvRGBA, recvSize[0], recvSize[1], filename); 
-
           /* now we compose two tiles together */
           const int newTileRegion[4] = {
             std::min(tileRegion[0], recvRegion[0]),
@@ -286,11 +380,6 @@ namespace tree {
             std::min(tileRegion[2], recvRegion[2]),
             std::max(tileRegion[3], recvRegion[3])
           };
-          // std::cout << "RECV new tile region = "
-          //           << newTileRegion[0] << " " 
-          //           << newTileRegion[1] << " " 
-          //           << newTileRegion[2] << " " 
-          //           << newTileRegion[3] << std::endl;
           const int newTileSize[2] = { newTileRegion[1] - newTileRegion[0], 
                                        newTileRegion[3] - newTileRegion[2] };
           float *newTileRGBA = new float[4 * newTileSize[0] * newTileSize[1]];
@@ -304,15 +393,6 @@ namespace tree {
                   recvSize, recvRegion, recvRGBA,
                   newTileSize, newTileRegion, newTileRGBA);
           }
-
-          // std::cout << "RECV done compose" << std::endl;
-          // filename = "./compose_from_" + 
-          //   std::to_string(target) + "_to_" + 
-          //   std::to_string(MPIRank) + ".ppm";
-          // CreatePPM(newTileRGBA, newTileSize[0], newTileSize[1], filename); 
-          
-          // move data to new 
-          // TODO optimization
           delete [] recvRGBA;
           delete [] tileRGBA;
           tileRGBA = newTileRGBA;          
@@ -323,38 +403,63 @@ namespace tree {
           tileSize[0] = newTileSize[0];
           tileSize[1] = newTileSize[1];
           tileDepth = newTileDepth;
+#endif
         }
       } // if (idx == MPIRank)
-            
+
       if (action == -2) { // this is the root node
         /* we need to move the final image is on rank 0 */
         if ((idx == MPIRank) && (MPIRank != 0)) {
+          /* pass meta data */
+#if QCT_ALGO_TREE_USE_SOA
+          MPI_Send(&tile, sizeof(tile), MPI_BYTE,
+                   0, 20000, MPI_COMM_WORLD);
+          MPI_Send(tile.rgba, 4 * tile.tileSize, MPI_FLOAT,
+                   0, 20001, MPI_COMM_WORLD);
+#else
           MPI_Send( tileSize,   2, MPI_INT, 0, 20000, MPI_COMM_WORLD);
           MPI_Send( tileRegion, 4, MPI_INT, 0, 20001, MPI_COMM_WORLD);
           MPI_Send(&tileDepth,  1, MPI_FLOAT, 0, 20002, MPI_COMM_WORLD);
           MPI_Send( tileRGBA,   4 * tileSize[0] * tileSize[1], MPI_FLOAT, 
                     0, 20003, MPI_COMM_WORLD);
+#endif
         }        
         if ((idx != MPIRank) && (MPIRank == 0)) {
+          /* recv meda data */
+#if QCT_ALGO_TREE_USE_SOA
+          tile.Clean();
+          MPI_Recv(&tile, sizeof(tile), MPI_BYTE, 
+                   idx, 20000, MPI_COMM_WORLD,
+                   MPI_STATUS_IGNORE);
+          tile.Allocate();
+          MPI_Recv(tile.rgba, 4 * tile.tileSize, MPI_FLOAT, 
+                   idx, 20001, MPI_COMM_WORLD,
+                   MPI_STATUS_IGNORE);
+#else
           MPI_Recv( tileSize,   2, MPI_INT, idx, 20000, 
-                    MPI_COMM_WORLD, MPI_STATUS_IGNORE);        
+            MPI_COMM_WORLD, MPI_STATUS_IGNORE);        
           delete[] tileRGBA;
           tileRGBA = new float[4 * tileSize[0] * tileSize[1]];
           MPI_Recv( tileRegion, 4, MPI_INT, idx, 20001, 
-                    MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_COMM_WORLD, MPI_STATUS_IGNORE);
           MPI_Recv(&tileDepth,  1, MPI_FLOAT, idx, 20002, 
-                   MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_COMM_WORLD, MPI_STATUS_IGNORE);
           MPI_Recv( tileRGBA,   4 * tileSize[0] * tileSize[1], MPI_FLOAT,
-                    idx, 20003, MPI_COMM_WORLD, MPI_STATUS_IGNORE);          
+            idx, 20003, MPI_COMM_WORLD, MPI_STATUS_IGNORE);    
+#endif
         }
         /* final composition */
         if (MPIRank == 0) {
           finalRGBA = new float[4 * finalSize[0] * finalSize[1]];
+#if QCT_ALGO_TREE_USE_SOA
+          finalDepth = new float(*(tile.z));
+          Place(tile, finalSize, finalRGBA);
+#else
           finalDepth = new float(tileDepth);
           Place(tileSize, tileRegion, tileRGBA, finalSize, finalRGBA);
+#endif
         }
       }
-
       } // end of while
     }
   };
@@ -365,8 +470,10 @@ namespace tree {
     // compute tree using python  
     GetMetaInfo(*(tile.z), MPIRank, MPISize);
     ExchangeInfo(MPIRank, MPISize);
-
     // retrieve data
+#if QCT_ALGO_TREE_USE_SOA
+    this->tile = tile;
+#else
     tileDepth = (*tile.z);
     tileSize[0] = tile.tileDim[0];
     tileSize[1] = tile.tileDim[1];
@@ -381,10 +488,7 @@ namespace tree {
     tileRegion[1] = (int)tile.region[2];
     tileRegion[2] = (int)tile.region[1];
     tileRegion[3] = (int)tile.region[3];
-    
-    // // DEBUG:: save tile to images
-    // std::string output = "./setTile" + std::to_string(MPIRank) + ".ppm";
-    // CreatePPM(tileRGBA, tileSize[0], tileSize[1], output);
+#endif
   };
 
 };

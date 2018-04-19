@@ -4,6 +4,10 @@
 #include "../Tile.h"
 #include "common/TreeDiagram.h"
 
+#include <array>
+
+#define QCT_ALGO_TREE_USE_SOA 0
+
 namespace QCT {
 namespace algorithms {
 namespace tree {
@@ -12,19 +16,19 @@ namespace tree {
   private:
     int MPIRank;
     int MPISize;
-
+#if QCT_ALGO_TREE_USE_SOA
+    Tile   tile;
+#else
     int    tileSize[2];
     int    tileRegion[4]; /* x0 x1 y0 y1 */
     float  tileDepth;
     float* tileRGBA;
-
+#endif
     int target = -1;
     int action = -1; // (-1 = send) (-2 = root)
-
     float* finalRGBA  = nullptr;
     float* finalDepth = nullptr;
     uint32_t finalSize[2];
-
   public:
 
     Compositor_Tree(const uint32_t& width,
@@ -36,18 +40,11 @@ namespace tree {
 
     //! function to get final results
     const void *MapDepthBuffer() override;
-    const void *MapColorBuffer() override;
-    
-    int GetParRank () ;
-
+    const void *MapColorBuffer() override;   
     void Unmap(const void *mappedMem) override;
 
     //! upload tile
     void SetTile(Tile &tile) override;
-    //! set send 
-    void SetSend(int send);
-    //! set receive
-    void SetReceive(int receive);
 
     //! clear (the specified channels of) this frame buffer
     void Clear(const uint32_t channelFlags) override;

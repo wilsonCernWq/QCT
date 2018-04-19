@@ -3,13 +3,24 @@
 
 namespace QCT {
 
-  Tile::~Tile()
+  void Tile::Allocate()
   {
-    if (flag & QCT_TILE_SHARED) {
-      if (this->r) delete[] this->r;
-      if (this->g) delete[] this->g;
-      if (this->b) delete[] this->b;
-      if (this->a) delete[] this->a;
+    this->rgba = new float[tileSize * 4];
+    this->r = &(this->rgba[0]);
+    this->g = &(this->rgba[tileSize]);
+    this->b = &(this->rgba[tileSize+tileSize]);
+    this->a = &(this->rgba[tileSize+tileSize+tileSize]);
+    if (flag & QCT_TILE_REDUCED_DEPTH) {
+      this->z = new float();
+    } else {
+      this->z = new float[tileSize];
+    }
+  }
+
+  void Tile::Clean() 
+  {
+    if (!(flag & QCT_TILE_SHARED)) {
+      if (this->rgba) delete[] this->rgba;
     }
     if (flag & QCT_TILE_REDUCED_DEPTH) {
       if (this->z) delete this->z;
@@ -17,6 +28,9 @@ namespace QCT {
       if (this->z) delete[] this->z;
     }
   }
+
+  Tile::~Tile()
+  {}
 
   Tile::Tile(const std::array<uint32_t, 4> &region, 
              const std::array<uint32_t, 2> &fbSize,
@@ -36,24 +50,21 @@ namespace QCT {
   {
     /*! check if we need to do deep copy of the image data */
     if (flag & QCT_TILE_SHARED) {
-      this->r = rptr;
-      this->g = gptr;
-      this->b = bptr;
-      this->a = aptr;
-    } else {
-      this->r = new float[tileSize];
-      this->g = new float[tileSize];
-      this->b = new float[tileSize];
-      this->a = new float[tileSize];
-      // TODO we hope the compiler is smart enough here
-      std::copy(rptr, rptr + tileSize, this->r);
-      std::copy(gptr, gptr + tileSize, this->g);
-      std::copy(bptr, bptr + tileSize, this->b);
-      std::copy(aptr, aptr + tileSize, this->a);
+      Error::WarnOnce("The tile cannot be shared because an RGBA "
+                      "image in an SOA is required");
     }
-
+    this->rgba = new float[tileSize * 4];
+    this->r = &(this->rgba[0]);
+    this->g = &(this->rgba[tileSize]);
+    this->b = &(this->rgba[tileSize+tileSize]);
+    this->a = &(this->rgba[tileSize+tileSize+tileSize]);
+    // TODO we hope the compiler is smart enough here
+    std::copy(rptr, rptr + tileSize, this->rgba + 0);
+    std::copy(gptr, gptr + tileSize, this->rgba + tileSize);
+    std::copy(bptr, bptr + tileSize, this->rgba + tileSize * 2);
+    std::copy(aptr, aptr + tileSize, this->rgba + tileSize * 3);
+    
     SetDepth(depth, flag);
-
   }
 
   Tile::Tile(const std::array<uint32_t, 4> &region, 
@@ -64,21 +75,30 @@ namespace QCT {
     /*! because we are having different data structures, we have to do deep
      *  copy here
      */
-    if (flag & QCT_TILE_SHARED) {
-      Error::WarnOnce("The tile cannot be shared because the RGBA "
-                      "data is in an AOS style,\n"
-                      "\twhile a SOA style is required");
-    }
-    this->r = new float[tileSize];
-    this->g = new float[tileSize];
-    this->b = new float[tileSize];
-    this->a = new float[tileSize];
-    // TODO parallel this loop
-    for (auto i = 0; i < tileSize; ++i) {
-      this->r[i] = rgba[4 * i + 0];
-      this->g[i] = rgba[4 * i + 1];
-      this->b[i] = rgba[4 * i + 2];
-      this->a[i] = rgba[4 * i + 3];
+    if (flag & QCT_TILE_FORMAT_SOA) {
+      if (flag & QCT_TILE_SHARED) {
+        this->rgba = rgba;
+      } else {
+        this->rgba = new float[tileSize * 4];
+        this->r = &(this->rgba[0]);
+        this->g = &(this->rgba[tileSize]);
+        this->b = &(this->rgba[tileSize+tileSize]);
+        this->a = &(this->rgba[tileSize+tileSize+tileSize]);
+        std::copy(rgba, rgba + tileSize * 4, this->rgba);
+      }
+    } else {
+      this->rgba = new float[tileSize * 4];
+      this->r = &(this->rgba[0]);
+      this->g = &(this->rgba[tileSize]);
+      this->b = &(this->rgba[tileSize+tileSize]);
+      this->a = &(this->rgba[tileSize+tileSize+tileSize]);
+      // TODO parallel this loop
+      for (auto i = 0; i < tileSize; ++i) {
+        this->rgba[               i] = rgba[4 * i + 0];
+        this->rgba[tileSize     + i] = rgba[4 * i + 1];
+        this->rgba[tileSize * 2 + i] = rgba[4 * i + 2];
+        this->rgba[tileSize * 3 + i] = rgba[4 * i + 3];
+      }
     }
 
     SetDepth(depth, flag);

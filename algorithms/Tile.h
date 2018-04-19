@@ -9,7 +9,8 @@
 #include <array>
 
 #define QCT_TILE_SHARED        (1 << 0)
-#define QCT_TILE_REDUCED_DEPTH (1 << 1)
+#define QCT_TILE_FORMAT_SOA    (1 << 1)
+#define QCT_TILE_REDUCED_DEPTH (1 << 2)
 
 namespace QCT {  
 
@@ -30,19 +31,20 @@ namespace QCT {
     /*!< tile size */ 
     std::array<uint32_t, 2> tileDim;
     uint32_t tileSize{0};
-    // 'red' component; in float.
+    // 'rgba' component; in float.
+    float *rgba = nullptr;
     float *r = nullptr;
-    // 'green' component; in float.
     float *g = nullptr;
-    // 'blue' component; in float.
     float *b = nullptr;
-    // 'alpha' component; in float.
     float *a = nullptr;
     // 'depth' component; in float.
     float *z = nullptr;
 
+    void Allocate();
+    void Clean();
+
     ~Tile();
-    Tile() = default;   
+    Tile() = default;
 
     Tile(const std::array<uint32_t, 4> &region, 
          const std::array<uint32_t, 2> &fbSize,
@@ -81,11 +83,13 @@ namespace QCT {
       : Tile(arr4u{r0, r1, r2, r3}, arr2u{f0, f1}, rgba, d, flag)
       {}
 
-  private:
     Tile(const std::array<uint32_t, 4> &region, 
          const std::array<uint32_t, 2> &fbSize,
          const uint32_t flag);
+
+  private:
     void SetDepth(float* depth, const uint32_t flag = 0);
+
   };
 
 };
