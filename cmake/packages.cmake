@@ -50,8 +50,4 @@ endif (IMPORT_GLM)
 # find ospray
 if (IMPORT_OSPRAY)
   find_package(ospray REQUIRED)
-  add_library(ospray INTERFACE IMPORTED)
-  set_target_properties(ospray PROPERTIES
-    INTERFACE_INCLUDE_DIRECTORIES "${OSPRAY_INCLUDE_DIRS}"
-    INTERFACE_LINK_LIBRARIES "${OSPRAY_LIBRARIES}")
 endif (IMPORT_OSPRAY)
