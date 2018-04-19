@@ -7,4 +7,4 @@ target_link_libraries(algoTree${WARMT_BUILD_SURFIX}
   MPI)
 set_target_properties(algoTree${WARMT_BUILD_SURFIX} 
   PROPERTIES
-  COMPILE_FLAGS "${WARMT_BUILD_FLAG}")
+  COMPILE_FLAGS "${WARMT_BUILD_FLAG} -std=c++17")

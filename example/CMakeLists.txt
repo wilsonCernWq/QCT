@@ -9,7 +9,7 @@ target_include_directories(utils${WARMT_BUILD_SURFIX} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/utils;>")
 target_link_libraries(utils${WARMT_BUILD_SURFIX} "")
 set_target_properties(utils${WARMT_BUILD_SURFIX} 
-  PROPERTIES COMPILE_FLAGS "${WARMT_BUILD_FLAG} -std=c++1z")
+  PROPERTIES COMPILE_FLAGS "${WARMT_BUILD_FLAG} -std=c++17")
 
 # simple program
 if (BUILD_EXAMPLE_SIMPLE)
@@ -25,7 +25,7 @@ if (BUILD_EXAMPLE_SIMPLE)
     "${CMAKE_CURRENT_SOURCE_DIR}/simple;"
     ">")
   set_target_properties(simple${WARMT_BUILD_SURFIX} 
-    PROPERTIES COMPILE_FLAGS "${WARMT_BUILD_FLAG} -std=c++1z")
+    PROPERTIES COMPILE_FLAGS "${WARMT_BUILD_FLAG} -std=c++17")
 endif (BUILD_EXAMPLE_SIMPLE)
 
 # volume viewer program
@@ -45,5 +45,5 @@ if (BUILD_EXAMPLE_VOLUME)
     "${CMAKE_CURRENT_SOURCE_DIR}/volume;"
     ">")
   set_target_properties(volume${WARMT_BUILD_SURFIX} 
-    PROPERTIES COMPILE_FLAGS "${WARMT_BUILD_FLAG} -std=c++1z")
+    PROPERTIES COMPILE_FLAGS "${WARMT_BUILD_FLAG} -std=c++17")
 endif (BUILD_EXAMPLE_VOLUME)

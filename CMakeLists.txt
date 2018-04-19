@@ -40,7 +40,7 @@ target_include_directories(qct${WARMT_BUILD_SURFIX} PUBLIC
 target_link_libraries(qct${WARMT_BUILD_SURFIX} PRIVATE
   algorithms${WARMT_BUILD_SURFIX})
 set_target_properties(qct${WARMT_BUILD_SURFIX}
-  PROPERTIES COMPILE_FLAGS "${WARMT_BUILD_FLAG} -std=c++1z")
+  PROPERTIES COMPILE_FLAGS "${WARMT_BUILD_FLAG}")
 
 # ┌──────────────────────────────────────────────────────────────────┐
 # │  Example Program                                                 │

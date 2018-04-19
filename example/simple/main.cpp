@@ -150,6 +150,7 @@ int main(const int ac, const char* av[])
     ////////////////////////////////////////////////////////////////////////
     // Test Tree Method
     auto tree = QCT::Create(QCT::ALGO_TREE, width, height);
+    clock.Start();
     float depth = imgList[0].GetDepth();
     QCT::Tile tile(imgList[0].GetExtents(0),
                    imgList[0].GetExtents(2),
@@ -163,9 +164,12 @@ int main(const int ac, const char* av[])
     QCT::BeginFrame(tree);
     QCT::SetTile(tree, tile);
     QCT::EndFrame(tree);
-    CreatePPM((float*)QCT::MapColorBuffer(tree), width, height, outputdir);
-    std::cout << "[Multiple Node (Tree method)] " << "finish" << std::endl;
-    
+    clock.Stop();
+    if (mpiRank == 0) {
+      CreatePPM((float*)QCT::MapColorBuffer(tree), width, height, outputdir);
+      std::cout << "[Multiple Node (Tree method)] " << clock.GetDuration() 
+                << " seconds to finish" << std::endl;    
+    }
 #else
     ////////////////////////////////////////////////////////////////////////
     // Using VisIt Method
@@ -190,14 +194,13 @@ int main(const int ac, const char* av[])
       clock.Stop();
       ////////////////////////////////////////////////////////////////////////
       // Timing
-      CreatePPM((float*)QCT::MapColorBuffer(visit), 
-		width, height, outputdir);
-      std::cout << "[Multiple Node (VisIt method)] " << clock.GetDuration() 
-		<< " seconds to finish" << std::endl;
+      if (MPIRank == 0) {
+        CreatePPM((float*)QCT::MapColorBuffer(visit), 
+                  width, height, outputdir);
+        std::cout << "[Multiple Node (VisIt method)] " << clock.GetDuration() 
+                  << " seconds to finish" << std::endl;
+      }
     }
-    //else {
-        //auto tree = QCT::Create(QCT::ALGO_TREE, width, height);
-    //}
 #endif
 
   }

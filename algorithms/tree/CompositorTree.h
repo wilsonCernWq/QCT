@@ -1,12 +1,8 @@
 #pragma once
 
-
 #include "../Compositor.h"
 #include "../Tile.h"
 #include "common/TreeDiagram.h"
-
-#include <fstream>
-#include <mpi.h>
 
 namespace QCT {
 namespace algorithms {
@@ -14,23 +10,27 @@ namespace tree {
 
   class Compositor_Tree : public Compositor {
   private:
-    std::string TreeFile;
-    uint32_t W, H;
-    uint32_t tileW, tileH;
-    int region[4];
-    float* rgba = nullptr;  //save lastest tile 
-    float* depth = nullptr; // save lastest depth
-    float* output = nullptr; // will delete later
     int MPIRank;
     int MPISize;
-    int SEND = -1;
-    int RECEIVE = -1;
+
+    int    tileSize[2];
+    int    tileRegion[4]; /* x0 x1 y0 y1 */
+    float  tileDepth;
+    float* tileRGBA;
+
+    int target = -1;
+    int action = -1; // (-1 = send) (-2 = root)
+
+    float* finalRGBA  = nullptr;
+    float* finalDepth = nullptr;
+    uint32_t finalSize[2];
+
   public:
 
     Compositor_Tree(const uint32_t& width,
-                    const uint32_t& height,
-                    std::string tree_file);
+                    const uint32_t& height);
     virtual ~Compositor_Tree() {};
+
     //! status
     bool IsValid() override;
 
