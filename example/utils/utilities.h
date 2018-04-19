@@ -1,12 +1,14 @@
 #ifndef _UTILITIES_H_
 #define _UTILITIES_H_
 
+
 #include <fstream>
 #include <sstream>
 #include <string>
 #include <vector>
 #include <float.h>
-#include <math.h>       /* fabs */
+#include <math.h>
+
 
 #include "color.h"
 #include "timer.h"

@@ -14,6 +14,26 @@
 # include <limits.h>
 #endif
 
+void CreatePPM(const float * image, int dimX, int dimY, 
+		      const std::string& filename)
+{
+   // std::cout << "debug" << std::endl;
+    std::ofstream outputFile(filename.c_str(), std::ios::out | std::ios::binary);
+    outputFile <<  "P6\n" << dimX << "\n" << dimY << "\n" << 255 << "\n";    
+    for (int y=0; y<dimY; ++y){
+        for (int x=0; x<dimX; ++x){
+            int index = (y * dimX + x) * 4;            
+            char color[3];
+            color[0] = std::min(image[index + 0] , 1.0f) * 255;  // red
+            color[1] = std::min(image[index + 1] , 1.0f) * 255;  // green 
+            color[2] = std::min(image[index + 2] , 1.0f) * 255;  // blue
+            outputFile.write(color,3);
+        }
+    }    
+    outputFile.close();
+    std::cout << "debug" << std::endl;
+}
+
 namespace QCT {
 namespace algorithms {
 namespace tree {
@@ -128,8 +148,8 @@ namespace tree {
     //! end frame
     void Compositor_Tree::EndFrame() 
     {
-        //TreeFile = TreeFile + ".csv";
-        TreeFile = "../test.txt";
+        TreeFile = TreeFile + ".txt";
+       // TreeFile = "../test.txt";
         std::ifstream f(TreeFile);
        // std::cout << f.good() << std::endl;
         int Rank;
@@ -140,7 +160,7 @@ namespace tree {
                 if(Rank == MPIRank){
                     std::cout << "send = " << SEND << "  receive = " << RECEIVE << std::endl;
                     //check if the tile is RECEIVE
-                    if(RECEIVE != -1 && RECEIVE == -2){
+                    if(RECEIVE != -1 && RECEIVE != -2){
                         // receive != -1 : this node should receive from SEND
                         std::cout << "== rank " << MPIRank << " receive from " << "rank " << SEND << std::endl;                         
                         int tile_size[2];
@@ -156,9 +176,21 @@ namespace tree {
                         MPI_Recv(received_tile, 4*tile_size[0]*tile_size[1], MPI_FLOAT, SEND, 10003, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
                         //debug if receive right info
                         std::cout << "RECEIVE tile size = " << tile_size[0] << " " << tile_size[1] << std::endl;
-                        std::cout << "RECEIVE tile region = " << tile_region[0] << " " << tile_region[2] << std::endl;
+                        std::cout << "RECEIVE tile region = " << tile_region[0] << " " 
+                                                              << tile_region[1] << " "
+                                                              << tile_region[2] << " "
+                                                              << tile_region[3] << std::endl;
                         std::cout << "RECEIVE depth = " << *tile_depth << std::endl;
                         std::cout << "RECEIVE rgba = " << received_tile[3] << std::endl;
+                        std::cout << "RECEIVE SIDE Current Tile Size = " << tileW << " " << tileH << std::endl;
+                        std::cout << "RECEIVE SIDE Current Region = " << region[0] << " "
+                                                                      << region[1] << " "
+                                                                      << region[2] << " " 
+                                                                      << region[3] << std::endl;
+                        std::cout << "RECEIVE SIDE Current depth = " << *depth <<  std::endl;
+                        std::cout << "RECEIVE SIDE Current rgba = " << rgba[3] << std::endl;
+                        std::string filename = "../receive_from_" + std::to_string(SEND) + "_onRank_" + std::to_string(MPIRank) + ".ppm";
+                        CreatePPM(received_tile, tile_size[0], tile_size[1], filename); 
                         //std::cout << std::endl;
                         //!Compose
                         // compute new bounding box
@@ -167,19 +199,24 @@ namespace tree {
                         bbox[1] = std::max(tile_region[1], region[1]);
                         bbox[2] = std::min(tile_region[2], region[2]);
                         bbox[3] = std::max(tile_region[3], region[3]);
+                        std::cout << " New Region = " << bbox[0] << " " << bbox[1] << " " << bbox[2] << " " << bbox[3] << std::endl;
                         // new tile size
                         int out_tilesize[2];
                         out_tilesize[0] = bbox[1] - bbox[0];
                         out_tilesize[1] = bbox[3] - bbox[2];
+                        std::cout << std::endl;
+                        std::cout << " outImage size = " << out_tilesize[0] << " " << out_tilesize[1] << std::endl;
                         // new composed image buffer
-                        output = new float(4 * out_tilesize[0] * out_tilesize[1]);
+                        output = new float[4 * out_tilesize[0] * out_tilesize[1]];
                         // blend area
                         int blend_area[4];
                         blend_area[0] = std::max(tile_region[0], region[0]);
-                        blend_area[1] = std::max(tile_region[1], region[1]);
+                        blend_area[1] = std::min(tile_region[1], region[1]);
                         blend_area[2] = std::max(tile_region[2], region[2]);
-                        blend_area[3] = std::max(tile_region[3], region[3]);
+                        blend_area[3] = std::min(tile_region[3], region[3]);
 
+                        std::cout << "blend area = " << blend_area[0] << " " << blend_area[1] << " " 
+                                                    << blend_area[2] << " " << blend_area[3] << std::endl;
                         for(auto i = bbox[0]; i <bbox[1]; ++i){
                             for(auto j = bbox[2]; j < bbox[3]; ++j){
                                 if(i >= blend_area[0] && i <= blend_area[1] && j >= blend_area[2] && j < blend_area[3]){
@@ -218,41 +255,206 @@ namespace tree {
                                     output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 2] = rgba[srcIndex + 2]; 
                                     output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 3] = rgba[srcIndex + 3]; 
                                 }
-                            }
-                        }
+                            } // for loop of y
+                        }// for loop of x
+                        
                         // delete pointes and set new composed tile to rgba
                         rgba = nullptr;
                         delete received_tile;
                         rgba = output;
                         output = nullptr; 
+                        // set tile 
+                        tileW = out_tilesize[0];
+                        tileH = out_tilesize[1];
+                        // set region
+                        region[0] = bbox[0];
+                        region[1] = bbox[1];
+                        region[2] = bbox[2];
+                        region[3] = bbox[3];
 
-            }
-            
-            
-            else{//send tile to other node
+                        //if(RECEIVE == -2){
+                            //std::cout << "receive is -2 " << std::endl;
+                            //// receive == -2: this is the final composed process, then composed with output image
+                            //if(tileW < W || tileH < H){
+                                //std::cout << "invalid out image size" << std::endl;
 
-                std::cout << "== rank " << MPIRank << " send to rank " << SEND << std::endl;
-               // send tile size
-               int tile_size[2]; tile_size[0] = tileW; tile_size[1] = tileH;
-               std::cout << "SEND tile size = " << tile_size[0] << " " << tile_size[1] << std::endl;
-               std::cout << "SEND tile region = " << region[0] << " " << region[2] << std::endl;
-               std::cout << "SEND depth = " << *depth << " " << std::endl;
-               std::cout << "SEND rgba = " << rgba[3] << std::endl;
-               
-               //std::cout << std::endl;
-               MPI_Send(tile_size, 2, MPI_INT, SEND, 10000, MPI_COMM_WORLD);
-               //send region
-               MPI_Send(region, 4, MPI_INT, SEND, 10001, MPI_COMM_WORLD);
-               //send depth
-               MPI_Send(depth, 1, MPI_FLOAT, SEND, 10002, MPI_COMM_WORLD);
-               //send rgba 
-               MPI_Send(rgba, 4*tileW*tileH, MPI_FLOAT, SEND, 10003, MPI_COMM_WORLD);
-            }
+                            //}else{
+
+                                //output = new float [4 * W * H];
+                                //for(auto x = region[0]; x < region[1]; ++x){
+                                    //for(auto y = region[2]; y < region[3]; ++y){
+                                        //output[4 * (x + y * W) + 0] = rgba[4 * ((x - region[0]) + (y - region[2]) * tileW) + 0];
+                                        //output[4 * (x + y * W) + 1] = rgba[4 * ((x - region[0]) + (y - region[2]) * tileW) + 1];
+                                        //output[4 * (x + y * W) + 2] = rgba[4 * ((x - region[0]) + (y - region[2]) * tileW) + 2];
+                                        //output[4 * (x + y * W) + 3] = rgba[4 * ((x - region[0]) + (y - region[2]) * tileW) + 3];
+                                    //}
+                                //}
+                            //}
+                            //rgba = nullptr;
+                            //rgba = output;
+                            //output = nullptr;
+                        //} // end of receive 
+                    }else if(RECEIVE == -2){
+                        std::cout << " this is the last composition process" << std::endl;
+                         std::cout << "== rank " << MPIRank << " receive from " << "rank " << SEND << std::endl;                         
+                        int tile_size[2];
+                        float* received_tile;
+                        float* tile_depth;
+                        int tile_region[4];
+                        // receive tile size
+                        MPI_Recv(tile_size, 2, MPI_INT, SEND, 10000, MPI_COMM_WORLD, MPI_STATUS_IGNORE);        
+			            received_tile = new float[4 * tile_size[0] * tile_size[1]];
+                        //receive tiles from other nodes                
+                        MPI_Recv(tile_region, 4, MPI_INT, SEND, 10001, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        MPI_Recv(tile_depth, 1, MPI_FLOAT, SEND, 10002, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        MPI_Recv(received_tile, 4*tile_size[0]*tile_size[1], MPI_FLOAT, SEND, 10003, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+                        //MPI_Barrier(MPI_COMM_WORLD);
+                        //debug if receive right info
+                        std::cout << "RECEIVE tile size = " << tile_size[0] << " " << tile_size[1] << std::endl;
+                        std::cout << "RECEIVE tile region = " << tile_region[0] << " " 
+                                                              << tile_region[1] << " "
+                                                              << tile_region[2] << " "
+                                                              << tile_region[3] << std::endl;
+                        std::cout << "RECEIVE depth = " << *tile_depth << std::endl;
+                        std::cout << "RECEIVE rgba = " << received_tile[3] << std::endl;
+                        std::cout << "RECEIVE SIDE Current Tile Size = " << tileW << " " << tileH << std::endl;
+                        std::cout << "RECEIVE SIDE Current Region = " << region[0] << " "
+                                                                      << region[1] << " "
+                                                                      << region[2] << " " 
+                                                                      << region[3] << std::endl;
+                        std::cout << "RECEIVE SIDE Current depth = " << *depth <<  std::endl;
+                        std::cout << "RECEIVE SIDE Current rgba = " << rgba[3] << std::endl;
+                       // DEBUG:: save images after receive
+                        std::string filename = "../receive_from_" + std::to_string(SEND) + "_onRank_" + std::to_string(MPIRank) + "_last" + ".ppm";
+                       CreatePPM(received_tile, tile_size[0], tile_size[1], filename); 
+                        //std::cout << std::endl;
+                        //!Compose
+                        // compute new bounding box
+                        int bbox[4];
+                        bbox[0] = std::min(tile_region[0], region[0]);
+                        bbox[1] = std::max(tile_region[1], region[1]);
+                        bbox[2] = std::min(tile_region[2], region[2]);
+                        bbox[3] = std::max(tile_region[3], region[3]);
+                        std::cout << " New Region = " << bbox[0] << " " << bbox[1] << " " << bbox[2] << " " << bbox[3] << std::endl;
+                        // new tile size
+                        int out_tilesize[2];
+                        out_tilesize[0] = bbox[1] - bbox[0];
+                        out_tilesize[1] = bbox[3] - bbox[2];
+                        std::cout << std::endl;
+                        std::cout << " outImage size = " << out_tilesize[0] << " " << out_tilesize[1] << std::endl;
+                        // new composed image buffer
+                        output = new float[4 * out_tilesize[0] * out_tilesize[1]];
+                        // blend area
+                        int blend_area[4];
+                        blend_area[0] = std::max(tile_region[0], region[0]);
+                        blend_area[1] = std::min(tile_region[1], region[1]);
+                        blend_area[2] = std::max(tile_region[2], region[2]);
+                        blend_area[3] = std::min(tile_region[3], region[3]);
+
+                        std::cout << "blend area = " << blend_area[0] << " " << blend_area[1] << " " 
+                                                    << blend_area[2] << " " << blend_area[3] << std::endl;
+                        for(auto i = bbox[0]; i <bbox[1]; ++i){
+                            for(auto j = bbox[2]; j < bbox[3]; ++j){
+                                if(i >= blend_area[0] && i <= blend_area[1] && j >= blend_area[2] && j < blend_area[3]){
+                                    // this pixel should be compose back to front
+                                    int srcIndex, dstIndex;
+                                    if(*tile_depth > *depth){
+                                        // new tile is on the back
+                                        srcIndex = ((i - tile_region[0]) + (j - tile_region[2]) * tile_size[0]) * 4;
+                                        dstIndex = ((i - region[0]) + (j - region[2]) * tileW) * 4;
+                                        float trans = 1.0f - received_tile[srcIndex + 3];
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 0] = CLAMP(rgba[dstIndex + 0] * trans + received_tile[srcIndex + 0], 0.0f, 1.0f);
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 1] = CLAMP(rgba[dstIndex + 1] * trans + received_tile[srcIndex + 1], 0.0f, 1.0f);
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 2] = CLAMP(rgba[dstIndex + 2] * trans + received_tile[srcIndex + 2], 0.0f, 1.0f);
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 3] = CLAMP(rgba[dstIndex + 3] * trans + received_tile[srcIndex + 3], 0.0f, 1.0f);
+                                    }else{
+                                        // new tile is on the front  
+                                        srcIndex = ((i - region[0]) + (j - region[2]) * tileW) * 4;
+                                        dstIndex = ((i - tile_region[0]) + (j - tile_region[2]) * tile_region[0]) * 4;
+                                        float trans = 1.0f - rgba[srcIndex + 3];
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 0] = CLAMP(received_tile[dstIndex + 0] * trans + rgba[srcIndex + 0], 0.0f, 1.0f);
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 1] = CLAMP(received_tile[dstIndex + 1] * trans + rgba[srcIndex + 1], 0.0f, 1.0f);
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 2] = CLAMP(received_tile[dstIndex + 2] * trans + rgba[srcIndex + 2], 0.0f, 1.0f);
+                                        output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 3] = CLAMP(received_tile[dstIndex + 3] * trans + rgba[srcIndex + 3], 0.0f, 1.0f);
+                                    }
+                                
+                                }else if(i >= tile_region[0] && i <= tile_region[1] && j >= tile_region[2] && j <= tile_region[3]){
+                                    int srcIndex = ((i - tile_region[0]) + (j - tile_region[2]) * tile_size[0]) * 4;
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 0] = received_tile[srcIndex + 0]; 
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 1] = received_tile[srcIndex + 1]; 
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 2] = received_tile[srcIndex + 2]; 
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 3] = received_tile[srcIndex + 3]; 
+                                }else if(i >= region[0] && i <= region[1] && j >= region[2] && j <= region[3]){
+                                    int srcIndex = ((i - region[0]) + (j - region[2]) * tileW) * 4;
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 0] = rgba[srcIndex + 0]; 
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 1] = rgba[srcIndex + 1]; 
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 2] = rgba[srcIndex + 2]; 
+                                    output[4 * ((i - bbox[0]) + (j - bbox[2]) * out_tilesize[0]) + 3] = rgba[srcIndex + 3]; 
+                                }
+                            } // for loop of y
+                        }// for loop of x
+                        
+                        // delete pointes and set new composed tile to rgba
+                        rgba = nullptr;
+                        delete received_tile;
+                        rgba = output;
+                        output = nullptr; 
+                        // set tile 
+                        tileW = out_tilesize[0];
+                        tileH = out_tilesize[1];
+                        // set region
+                        region[0] = bbox[0];
+                        region[1] = bbox[1];
+                        region[2] = bbox[2];
+                        region[3] = bbox[3];
+
+                        // receive == -2: this is the final composed process, then composed with output image
+                        if(tileW > W || tileH > H){
+                           
+                             std::cout << "invalid out image size" << std::endl;
+                             std::cout << "tile width is " << tileW << " ,but final image width is " << W << std::endl;
+                             std::cout << "tile height is " << tileH << " ,but final image height is " << H << std::endl;
+
+                        }else{
+                            output = new float [4 * W * H];
+                            for(auto x = region[0]; x < region[1]; ++x){
+                                for(auto y = region[2]; y < region[3]; ++y){
+                                    output[4 * (x + y * W) + 0] = rgba[4 * ((x - region[0]) + (y - region[2]) * tileW) + 0];
+                                    output[4 * (x + y * W) + 1] = rgba[4 * ((x - region[0]) + (y - region[2]) * tileW) + 1];
+                                    output[4 * (x + y * W) + 2] = rgba[4 * ((x - region[0]) + (y - region[2]) * tileW) + 2];
+                                    output[4 * (x + y * W) + 3] = rgba[4 * ((x - region[0]) + (y - region[2]) * tileW) + 3];
+                                }
+                            }
+                        }
+                        rgba = nullptr;
+                        rgba = output;
+                        output = nullptr;
+                    }else{//send tile to other node
+
+                        std::cout << "== rank " << MPIRank << " send to rank " << SEND << std::endl;
+                        // send tile size
+                        int tile_size[2]; tile_size[0] = tileW; tile_size[1] = tileH;
+                        std::cout << "SEND tile size = " << tile_size[0] << " " << tile_size[1] << std::endl;
+                        std::cout << "SEND tile region = " << region[0] << " " << region[2] << std::endl;
+                        std::cout << "SEND depth = " << *depth << " " << std::endl;
+                        std::cout << "SEND rgba = " << rgba[3] << std::endl;
+                        std::cout << std::endl;
+                        // DEBUG: save image before send :: Correct!
+                        std::string filename = "../send_from_" + std::to_string(MPIRank) + "_toRank_" + std::to_string(SEND) + ".ppm";
+                        CreatePPM(rgba, tileW, tileH, filename);
+                        MPI_Send(tile_size, 2, MPI_INT, SEND, 10000, MPI_COMM_WORLD);
+
+                        //send region
+                        MPI_Send(region, 4, MPI_INT, SEND, 10001, MPI_COMM_WORLD);
+                        //send depth
+                        MPI_Send(depth, 1, MPI_FLOAT, SEND, 10002, MPI_COMM_WORLD);
+                        //send rgba 
+                        MPI_Send(rgba, 4*tileW*tileH, MPI_FLOAT, SEND, 10003, MPI_COMM_WORLD);
+                     }
 
                 }// end of check Rank == MPIRank
             } // end of while (go through all lines)
         }
-
     };
 
     //! upload tile
@@ -278,10 +480,16 @@ namespace tree {
       // get tile region
       /* x0 x1 y0 y1 */
       region[0] = (int)tile.region[0];
-      region[1] = (int)tile.region[1];
-      region[2] = (int)tile.region[2];
+      region[1] = (int)tile.region[2];
+      region[2] = (int)tile.region[1];
       region[3] = (int)tile.region[3];
     
+     // DEBUG:: save tile and rgba to images
+    std::string input_image = "../input.ppm";
+    std::string output_image = "../output" + std::to_string(MPIRank) + ".ppm";;
+    CreatePPM(rgba, tileW, tileH, output_image);
+
+
     };
 
     void Compositor_Tree::SetSend(int send)
