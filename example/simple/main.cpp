@@ -7,10 +7,7 @@
 #include "utils/timer.h"
 
 // all the algorithms
-#include "api.h"
-//#include "algorithms/Compositor.h"
-//#include "algorithms/visit/CompositorVisIt.h"
-//#include "algorithms/tree/CompositorTree.h"
+#include "qct/api.h"
 
 #include <unistd.h>
 #include <cstdlib>

@@ -34,8 +34,8 @@ add_subdirectory(algorithms)
 # ┌──────────────────────────────────────────────────────────────────┐
 # │  QCT Library                                                     │
 # └──────────────────────────────────────────────────────────────────┘
-add_library(qct${WARMT_BUILD_SURFIX} api.cpp)
-target_include_directories(qct${WARMT_BUILD_SURFIX} PRIVATE
+add_library(qct${WARMT_BUILD_SURFIX} qct/api.cpp)
+target_include_directories(qct${WARMT_BUILD_SURFIX} PUBLIC
   "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR};>")
 target_link_libraries(qct${WARMT_BUILD_SURFIX} PRIVATE
   algorithms${WARMT_BUILD_SURFIX})

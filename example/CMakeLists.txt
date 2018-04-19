@@ -35,10 +35,12 @@ if (BUILD_EXAMPLE_VOLUME)
   target_link_libraries(volume${WARMT_BUILD_SURFIX} PUBLIC
     utils${WARMT_BUILD_SURFIX}
     qct${WARMT_BUILD_SURFIX}
+    ${OSPRAY_LIBRARIES}
     glm
     MPI)
   target_include_directories(volume${WARMT_BUILD_SURFIX} PUBLIC
     "$<BUILD_INTERFACE:"
+    "${OSPRAY_INCLUDE_DIRS}"
     "${CMAKE_CURRENT_SOURCE_DIR}/..;"
     "${CMAKE_CURRENT_SOURCE_DIR}/volume;"
     ">")
