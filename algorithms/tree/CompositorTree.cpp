@@ -210,71 +210,81 @@ struct MetaInfo {
   float depth;
 };
 static MetaInfo info;
-  
-void ExchangeInfo(const int mpiRank, const int mpiSize) {
-  std::vector<MetaInfo> buffer(mpiSize);
-  MPI_Allgather(&info, sizeof(info), MPI_BYTE,
-                buffer.data(), sizeof(info), MPI_BYTE, 
-                MPI_COMM_WORLD);
-  /* pass stuffs to python */
-  std::string command;
-  command += "python3 ../algorithms/tree/graph/optimize/create_tree.py ";
-  command += " -o " + (TREE_FILE + std::to_string(mpiRank));
-  command += " -i ";
-  for (int i = 0; i < mpiSize; ++i) {
-    command += 
-      std::to_string(buffer[i].rack) + " " +
-      std::to_string(buffer[i].chassis * 10 + buffer[i].node) + " " +
-      std::to_string(buffer[i].depth) + " " ;
-  }
-  system(command.c_str());
-}
-
-void GetMetaInfo(const float &z, const int mpiRank, const int mpiSize)
-{
-  /** first we check if we are on stampede2 
-   *   --> check if TACC_SYSTEM=stampede2 */
-  bool onStampede2 = false;
-  if (const char* tacc = std::getenv("TACC_SYSTEM")) {
-    if (std::string(tacc) == "stampede2") {  onStampede2 = true; }
-  }
-  /* retrieve meta info  */
-  std::string hname;
-  if (onStampede2) {
-    /* we need to read from hostname */
-    char hostname[35]; gethostname(hostname, 35);
-    hname = std::string(hostname);      
-  } else {
-    /* we need to read simulated hostnames from files */
-    /* where are the files */
-    const char* dir;
-    if (!(dir = std::getenv("HOSTNAME_FILES"))) {
-      throw std::runtime_error("please define environmental variable "
-                               "'HOSTNAME_FILES' indicating the directory "
-                               "of all the hostnames files");      
-    }
-    /* compute filename */
-    std::string fname = 
-      std::string(dir) + "/hostname." + std::to_string(mpiRank) + ".txt";
-    /* okay we need to read all the files */
-    std::ifstream infile(fname.c_str(), std::ifstream::in);
-    if (!infile) {
-      throw std::runtime_error(("unable to open file " + fname).c_str());
-    }      
-    if (!std::getline(infile, hname)) { // process the first line
-      throw std::runtime_error(("empty file " + fname).c_str());
-    }
-  }
-  /* construct meta info */ 
-  info.rack = std::stoi(hname.substr(1,3));
-  info.chassis = std::stoi(hname.substr(5,2));
-  info.node = std::stoi(hname.substr(7,1));
-  info.depth = z;    
-}
 
 namespace QCT {
 namespace algorithms {
 namespace tree {
+
+  void Compositor_Tree::ExchangeInfo(const int mpiRank, const int mpiSize) 
+  {
+    std::vector<MetaInfo> buffer(mpiSize);
+    MPI_Allgather(&info, sizeof(info), MPI_BYTE,
+                  buffer.data(), sizeof(info), MPI_BYTE, 
+                  MPI_COMM_WORLD);
+
+    /* pass stuffs to python */
+    std::string command;
+    command += "python3 ../algorithms/tree/graph/optimize/create_tree.py ";
+    command += " -o " + (TREE_FILE + std::to_string(mpiRank));
+    command += " -i ";
+    for (int i = 0; i < mpiSize; ++i) {
+      command += 
+        std::to_string(buffer[i].rack) + " " +
+        std::to_string(buffer[i].chassis * 10 + buffer[i].node) + " " +
+        std::to_string(buffer[i].depth) + " " ;
+    }
+    system(command.c_str());
+  
+    /* construct tree */  
+    std::ifstream f(TREE_FILE + std::to_string(mpiRank) + ".txt");
+    if (f.is_open() && f.good()) {
+      int r, t, a;
+      while (f >> r >> t >> a) { tree.AddNode(r, t, a); }
+    }
+    tree.Shrink();
+  }
+
+  void Compositor_Tree::GetMetaInfo(const float &z, const int mpiRank, const int mpiSize)
+  {
+    /** first we check if we are on stampede2 
+     *   --> check if TACC_SYSTEM=stampede2 */
+    bool onStampede2 = false;
+    if (const char* tacc = std::getenv("TACC_SYSTEM")) {
+      if (std::string(tacc) == "stampede2") {  onStampede2 = true; }
+    }
+    /* retrieve meta info  */
+    std::string hname;
+    if (onStampede2) {
+      /* we need to read from hostname */
+      char hostname[35]; gethostname(hostname, 35);
+      hname = std::string(hostname);      
+    } else {
+      /* we need to read simulated hostnames from files */
+      /* where are the files */
+      const char* dir;
+      if (!(dir = std::getenv("HOSTNAME_FILES"))) {
+        throw std::runtime_error("please define environmental variable "
+                                 "'HOSTNAME_FILES' indicating the directory "
+                                 "of all the hostnames files");      
+      }
+      /* compute filename */
+      std::string fname = 
+        std::string(dir) + "/hostname." + std::to_string(mpiRank) + ".txt";
+      /* okay we need to read all the files */
+      std::ifstream infile(fname.c_str(), std::ifstream::in);
+      if (!infile) {
+        throw std::runtime_error(("unable to open file " + fname).c_str());
+      }      
+      if (!std::getline(infile, hname)) { // process the first line
+        throw std::runtime_error(("empty file " + fname).c_str());
+      }
+    }
+    /* construct meta info */ 
+    info.rack = std::stoi(hname.substr(1,3));
+    info.chassis = std::stoi(hname.substr(5,2));
+    info.node = std::stoi(hname.substr(7,1));
+    info.depth = z;    
+  }
 
   Compositor_Tree::Compositor_Tree(const uint32_t& width,
                                    const uint32_t& height)
@@ -283,6 +293,7 @@ namespace tree {
     // set MPIRank and MPISize
     MPI_Comm_rank(MPI_COMM_WORLD, &MPIRank);
     MPI_Comm_size(MPI_COMM_WORLD, &MPISize);
+    tree.Allocate(MPISize);
   };
 
   //! function to get final results
@@ -302,165 +313,164 @@ namespace tree {
   //! end frame
   void Compositor_Tree::EndFrame() 
   {
-    std::ifstream f(TREE_FILE + std::to_string(mpiRank) + ".txt");
-    if (f.is_open() && f.good()) {
-      int idx;
-      while (f >> idx >> target >> action) {
-      if (idx == MPIRank) {
-        if (action == -1) { // send tile to other node
-          /* pass meta data */
+    for (auto it = tree.GetBegin(MPIRank); it != tree.GetEnd(MPIRank); ++it) {
+      int target = (*it).target;
+      if (tree.IsSend(it)) { // send a tile to target
+        // std::cout << "send from " << MPIRank << " to " << target << std::endl; 
+        /* pass meta data */
 #if QCT_ALGO_TREE_USE_SOA
-          MPI_Send(&tile, sizeof(tile), MPI_BYTE,
-                   target, 30000, MPI_COMM_WORLD);
-          MPI_Send(tile.rgba, 4 * tile.tileSize, MPI_FLOAT,
-                   target, 30001, MPI_COMM_WORLD);
-          MPI_Send(tile.z, 1, MPI_FLOAT,
-                   target, 30005, MPI_COMM_WORLD);
+        MPI_Send(&tile, sizeof(tile), MPI_BYTE,
+                 target, 30000, MPI_COMM_WORLD);
+        MPI_Send(tile.rgba, 4 * tile.tileSize, MPI_FLOAT,
+                 target, 30001, MPI_COMM_WORLD);
+        MPI_Send(tile.z, 1, MPI_FLOAT,
+                 target, 30005, MPI_COMM_WORLD);
 #else
-          MPI_Send( tileSize,   2, MPI_INT, target, 10000, MPI_COMM_WORLD);
-          MPI_Send( tileRegion, 4, MPI_INT, target, 10001, MPI_COMM_WORLD);
-          MPI_Send(&tileDepth,  1, MPI_FLOAT, target, 10002, MPI_COMM_WORLD);
-          MPI_Send( tileRGBA,   4 * tileSize[0] * tileSize[1], MPI_FLOAT, 
-                    target, 10003, MPI_COMM_WORLD);
+        MPI_Send( tileSize,   2, MPI_INT, target, 10000, MPI_COMM_WORLD);
+        MPI_Send( tileRegion, 4, MPI_INT, target, 10001, MPI_COMM_WORLD);
+        MPI_Send(&tileDepth,  1, MPI_FLOAT, target, 10002, MPI_COMM_WORLD);
+        MPI_Send( tileRGBA,   4 * tileSize[0] * tileSize[1], MPI_FLOAT, 
+                  target, 10003, MPI_COMM_WORLD);
 #endif
-        } else if (action != -1) { // receive a tile from target
+      } else { // receive a tile from target
+        // std::cout << "recv at " << MPIRank << " from " << target << std::endl; 
 #if QCT_ALGO_TREE_USE_SOA
-          /* recv meda data */
-          Tile recv;
-          MPI_Recv(&recv, sizeof(recv), MPI_BYTE, 
-                   target, 30000, MPI_COMM_WORLD,
-                   MPI_STATUS_IGNORE);
-          recv.Allocate();
-          MPI_Recv(recv.rgba, 4 * recv.tileSize, MPI_FLOAT, 
-                   target, 30001, MPI_COMM_WORLD,
-                   MPI_STATUS_IGNORE);
-          MPI_Recv(recv.z, 1, MPI_FLOAT, 
-                   target, 30005, MPI_COMM_WORLD,
-                   MPI_STATUS_IGNORE);
-          /* now we compose two tiles together */
-          const std::array<uint32_t, 4> composedRegion {
-            std::min(tile.region[0], recv.region[0]),
-            std::min(tile.region[1], recv.region[1]),
-            std::max(tile.region[2], recv.region[2]),
-            std::max(tile.region[3], recv.region[3])
-          };
-          const std::array<uint32_t, 2> composedDim {
-            finalSize[0], finalSize[1]
-          };
-          Tile composed(composedRegion, composedDim, QCT_TILE_REDUCED_DEPTH);
-          composed.Allocate();
-          *(composed.z) = std::min(*(tile.z), *(recv.z));
-          if (*(tile.z) > *(recv.z)) {
-            Blend(recv, tile, composed);
-          } else {
-            Blend(tile, recv, composed);
-          }
-          recv.Clean();
-          tile.Clean();
-          tile = composed;
-#else
-          /* recv meda data */
-          int    recvSize[2];
-          int    recvRegion[4];
-          float* recvRGBA;
-          float  recvDepth;
-          MPI_Recv( recvSize,   2, MPI_INT, target, 10000, 
-                    MPI_COMM_WORLD, MPI_STATUS_IGNORE);        
-          recvRGBA = new float[4 * recvSize[0] * recvSize[1]];
-          MPI_Recv( recvRegion, 4, MPI_INT, target, 10001, 
-                    MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-          MPI_Recv(&recvDepth,  1, MPI_FLOAT, target, 10002, 
-                   MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-          MPI_Recv( recvRGBA,   4 * recvSize[0] * recvSize[1], MPI_FLOAT,
-                    target, 10003, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-          /* now we compose two tiles together */
-          const int newTileRegion[4] = {
-            std::min(tileRegion[0], recvRegion[0]),
-            std::max(tileRegion[1], recvRegion[1]),
-            std::min(tileRegion[2], recvRegion[2]),
-            std::max(tileRegion[3], recvRegion[3])
-          };
-          const int newTileSize[2] = { newTileRegion[1] - newTileRegion[0], 
-                                       newTileRegion[3] - newTileRegion[2] };
-          float *newTileRGBA = new float[4 * newTileSize[0] * newTileSize[1]];
-          float  newTileDepth = std::min(tileDepth, recvDepth);
-          if (tileDepth > recvDepth) {
-            Blend(recvSize, recvRegion, recvRGBA,
-                  tileSize, tileRegion, tileRGBA,
-                  newTileSize, newTileRegion, newTileRGBA);
-          } else {
-            Blend(tileSize, tileRegion, tileRGBA,
-                  recvSize, recvRegion, recvRGBA,
-                  newTileSize, newTileRegion, newTileRGBA);
-          }
-          delete [] recvRGBA;
-          delete [] tileRGBA;
-          tileRGBA = newTileRGBA;          
-          tileRegion[0] = newTileRegion[0];
-          tileRegion[1] = newTileRegion[1];
-          tileRegion[2] = newTileRegion[2];
-          tileRegion[3] = newTileRegion[3];
-          tileSize[0] = newTileSize[0];
-          tileSize[1] = newTileSize[1];
-          tileDepth = newTileDepth;
-#endif
+        /* recv meda data */
+        Tile recv;
+        MPI_Recv(&recv, sizeof(recv), MPI_BYTE, 
+                 target, 30000, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
+        recv.Allocate();
+        MPI_Recv(recv.rgba, 4 * recv.tileSize, MPI_FLOAT, 
+                 target, 30001, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
+        MPI_Recv(recv.z, 1, MPI_FLOAT, 
+                 target, 30005, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
+        /* now we compose two tiles together */
+        const std::array<uint32_t, 4> composedRegion  = {
+          std::min(tile.region[0], recv.region[0]),
+          std::min(tile.region[1], recv.region[1]),
+          std::max(tile.region[2], recv.region[2]),
+          std::max(tile.region[3], recv.region[3])
+        };
+        const std::array<uint32_t, 2> composedDim = {
+          finalSize[0], finalSize[1]
+        };
+        Tile composed(composedRegion, composedDim, QCT_TILE_REDUCED_DEPTH);
+        composed.Allocate();
+        *(composed.z) = std::min(*(tile.z), *(recv.z));
+        if (*(tile.z) > *(recv.z)) {
+          Blend(recv, tile, composed);
+        } else {
+          Blend(tile, recv, composed);
         }
-      } // if (idx == MPIRank)
-
-      if (action == -2) { // this is the root node
-        /* we need to move the final image is on rank 0 */
-        if ((idx == MPIRank) && (MPIRank != 0)) {
-          /* pass meta data */
-#if QCT_ALGO_TREE_USE_SOA
-          MPI_Send(&tile, sizeof(tile), MPI_BYTE,
-                   0, 20000, MPI_COMM_WORLD);
-          MPI_Send(tile.rgba, 4 * tile.tileSize, MPI_FLOAT,
-                   0, 20001, MPI_COMM_WORLD);
+        recv.Clean();
+        tile.Clean();
+        tile = composed;
 #else
-          MPI_Send( tileSize,   2, MPI_INT, 0, 20000, MPI_COMM_WORLD);
-          MPI_Send( tileRegion, 4, MPI_INT, 0, 20001, MPI_COMM_WORLD);
-          MPI_Send(&tileDepth,  1, MPI_FLOAT, 0, 20002, MPI_COMM_WORLD);
-          MPI_Send( tileRGBA,   4 * tileSize[0] * tileSize[1], MPI_FLOAT, 
-                    0, 20003, MPI_COMM_WORLD);
-#endif
-        }        
-        if ((idx != MPIRank) && (MPIRank == 0)) {
-          /* recv meda data */
-#if QCT_ALGO_TREE_USE_SOA
-          tile.Clean();
-          MPI_Recv(&tile, sizeof(tile), MPI_BYTE, 
-                   idx, 20000, MPI_COMM_WORLD,
-                   MPI_STATUS_IGNORE);
-          tile.Allocate();
-          MPI_Recv(tile.rgba, 4 * tile.tileSize, MPI_FLOAT, 
-                   idx, 20001, MPI_COMM_WORLD,
-                   MPI_STATUS_IGNORE);
-#else
-          MPI_Recv( tileSize,   2, MPI_INT, idx, 20000, 
-            MPI_COMM_WORLD, MPI_STATUS_IGNORE);        
-          delete[] tileRGBA;
-          tileRGBA = new float[4 * tileSize[0] * tileSize[1]];
-          MPI_Recv( tileRegion, 4, MPI_INT, idx, 20001, 
-            MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-          MPI_Recv(&tileDepth,  1, MPI_FLOAT, idx, 20002, 
-            MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-          MPI_Recv( tileRGBA,   4 * tileSize[0] * tileSize[1], MPI_FLOAT,
-            idx, 20003, MPI_COMM_WORLD, MPI_STATUS_IGNORE);    
-#endif
+        /* recv meda data */
+        int    recvSize[2];
+        int    recvRegion[4];
+        float* recvRGBA;
+        float  recvDepth;
+        MPI_Recv( recvSize,   2, MPI_INT, target, 10000, 
+                  MPI_COMM_WORLD, MPI_STATUS_IGNORE);        
+        recvRGBA = new float[4 * recvSize[0] * recvSize[1]];
+        MPI_Recv( recvRegion, 4, MPI_INT, target, 10001, 
+                  MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&recvDepth,  1, MPI_FLOAT, target, 10002, 
+                 MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv( recvRGBA,   4 * recvSize[0] * recvSize[1], MPI_FLOAT,
+                  target, 10003, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        /* now we compose two tiles together */
+        const int newTileRegion[4] = {
+          std::min(tileRegion[0], recvRegion[0]),
+          std::max(tileRegion[1], recvRegion[1]),
+          std::min(tileRegion[2], recvRegion[2]),
+          std::max(tileRegion[3], recvRegion[3])
+        };
+        const int newTileSize[2] = { newTileRegion[1] - newTileRegion[0], 
+                                     newTileRegion[3] - newTileRegion[2] };
+        float *newTileRGBA = new float[4 * newTileSize[0] * newTileSize[1]];
+        float  newTileDepth = std::min(tileDepth, recvDepth);
+        if (tileDepth > recvDepth) {
+          Blend(recvSize, recvRegion, recvRGBA,
+                tileSize, tileRegion, tileRGBA,
+                newTileSize, newTileRegion, newTileRGBA);
+        } else {
+          Blend(tileSize, tileRegion, tileRGBA,
+                recvSize, recvRegion, recvRGBA,
+                newTileSize, newTileRegion, newTileRGBA);
         }
-        /* final composition */
-        if (MPIRank == 0) {
-          finalRGBA = new float[4 * finalSize[0] * finalSize[1]];
-#if QCT_ALGO_TREE_USE_SOA
-          finalDepth = new float(*(tile.z));
-          Place(tile, finalSize, finalRGBA);
-#else
-          finalDepth = new float(tileDepth);
-          Place(tileSize, tileRegion, tileRGBA, finalSize, finalRGBA);
+        delete [] recvRGBA;
+        delete [] tileRGBA;
+        tileRGBA = newTileRGBA;          
+        tileRegion[0] = newTileRegion[0];
+        tileRegion[1] = newTileRegion[1];
+        tileRegion[2] = newTileRegion[2];
+        tileRegion[3] = newTileRegion[3];
+        tileSize[0] = newTileSize[0];
+        tileSize[1] = newTileSize[1];
+        tileDepth = newTileDepth;
 #endif
-        }
       }
-      } // end of while
+    } // if (idx == MPIRank)
+
+    /* we need to move the final image is on rank 0 */
+    if (tree.IsRoot(MPIRank) && (MPIRank != 0)) {
+      /* pass meta data */
+#if QCT_ALGO_TREE_USE_SOA
+      MPI_Send(&tile, sizeof(tile), MPI_BYTE,
+               0, 20000, MPI_COMM_WORLD);
+      MPI_Send(tile.rgba, 4 * tile.tileSize, MPI_FLOAT,
+               0, 20001, MPI_COMM_WORLD);
+#else
+      MPI_Send( tileSize,   2, MPI_INT, 0, 20000, MPI_COMM_WORLD);
+      MPI_Send( tileRegion, 4, MPI_INT, 0, 20001, MPI_COMM_WORLD);
+      MPI_Send(&tileDepth,  1, MPI_FLOAT, 0, 20002, MPI_COMM_WORLD);
+      MPI_Send( tileRGBA,   4 * tileSize[0] * tileSize[1], MPI_FLOAT, 
+                0, 20003, MPI_COMM_WORLD);
+#endif
+    }        
+    if (!(tree.IsRoot(MPIRank)) && (MPIRank == 0)) {
+      /* recv meda data */
+#if QCT_ALGO_TREE_USE_SOA
+      tile.Clean();
+      MPI_Recv(&tile, sizeof(tile), MPI_BYTE, 
+               tree.GetRoot(), 20000, MPI_COMM_WORLD,
+               MPI_STATUS_IGNORE);
+      tile.Allocate();
+      MPI_Recv(tile.rgba, 4 * tile.tileSize, MPI_FLOAT, 
+               tree.GetRoot(), 20001, MPI_COMM_WORLD,
+               MPI_STATUS_IGNORE);
+#else
+      MPI_Recv( tileSize,   2, MPI_INT, 
+                MPI_ANY_SOURCE /*tree.GetRoot()*/, 20000, 
+                MPI_COMM_WORLD, MPI_STATUS_IGNORE);        
+      delete[] tileRGBA;
+      tileRGBA = new float[4 * tileSize[0] * tileSize[1]];
+      MPI_Recv( tileRegion, 4, MPI_INT, 
+                MPI_ANY_SOURCE /*tree.GetRoot()*/, 20001, 
+                MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv(&tileDepth,  1, MPI_FLOAT, 
+                MPI_ANY_SOURCE /*tree.GetRoot()*/, 20002, 
+                MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      MPI_Recv( tileRGBA,   4 * tileSize[0] * tileSize[1], MPI_FLOAT,
+                MPI_ANY_SOURCE /*tree.GetRoot()*/, 20003,
+                MPI_COMM_WORLD, MPI_STATUS_IGNORE);    
+#endif
+    }
+    /* final composition */
+    if (MPIRank == 0) {
+      finalRGBA = new float[4 * finalSize[0] * finalSize[1]];
+#if QCT_ALGO_TREE_USE_SOA
+      finalDepth = new float(*(tile.z));
+      Place(tile, finalSize, finalRGBA);
+#else
+      finalDepth = new float(tileDepth);
+      Place(tileSize, tileRegion, tileRGBA, finalSize, finalRGBA);
+#endif
     }
   };
 

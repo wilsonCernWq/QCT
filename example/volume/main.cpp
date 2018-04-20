@@ -82,24 +82,11 @@ int main(int argc, const char **argv)
   ospInit(&argc, argv);
   ospLoadModule("ispc");
   
-  //! init camera
-  OSPCamera camera = ospNewCamera("perspective");
-  ospSetf(camera, "aspect", imgSize.x/(float)imgSize.y);
-  ospSet3fv(camera, "pos", cam_pos);
-  ospSet3fv(camera, "dir", cam_view);
-  ospSet3fv(camera, "up",  cam_up);
-  ospCommit(camera); // commit each object to indicate modifications are done
-
   //! create world and renderer
   OSPModel world = ospNewModel();
   OSPRenderer renderer = ospNewRenderer("scivis"); 
 
-  //! setup volume/geometry
-
-  auto volume = (argc, argv);    
-  ospCommit(world);
-
-  //! lighting
+  //! create lighting
   OSPLight ambient_light = ospNewLight(renderer, "AmbientLight");
   ospSet1f(ambient_light, "intensity", 0.0f);
   ospCommit(ambient_light);
@@ -108,8 +95,21 @@ int main(int argc, const char **argv)
   ospSetVec3f(directional_light, "direction", osp::vec3f{20.0f, 20.0f, 20.0f});
   ospCommit(directional_light);
   std::vector<OSPLight> light_list { ambient_light, directional_light };
-  OSPData lights = ospNewData(light_list.size(), OSP_OBJECT, light_list.data());
+  OSPData lights = 
+    ospNewData(light_list.size(), OSP_OBJECT, light_list.data());
   ospCommit(lights);
+
+  //! init camera
+  OSPCamera camera = ospNewCamera("perspective");
+  ospSetf(camera, "aspect", imgSize.x/(float)imgSize.y);
+  ospSet3fv(camera, "pos", cam_pos);
+  ospSet3fv(camera, "dir", cam_view);
+  ospSet3fv(camera, "up",  cam_up);
+  ospCommit(camera); // commit each object to indicate modifications are done
+
+  //! setup volume/geometry
+  auto volume = (argc, argv);
+  ospCommit(world);
 
   //! renderer
   ospSetVec3f(renderer, "bgColor", osp::vec3f{0.5f, 0.5f, 0.5f});

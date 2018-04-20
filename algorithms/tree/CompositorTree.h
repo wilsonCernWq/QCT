@@ -16,6 +16,7 @@ namespace tree {
   private:
     int MPIRank;
     int MPISize;
+    TreeDiagram_Array tree;
 #if QCT_ALGO_TREE_USE_SOA
     Tile   tile;
 #else
@@ -24,10 +25,8 @@ namespace tree {
     float  tileDepth;
     float* tileRGBA;
 #endif
-    int target = -1;
-    int action = -1; // (-1 = send) (-2 = root)
-    float* finalRGBA  = nullptr;
-    float* finalDepth = nullptr;
+    float*   finalRGBA  = nullptr;
+    float*   finalDepth = nullptr;
     uint32_t finalSize[2];
   public:
 
@@ -54,6 +53,11 @@ namespace tree {
 
     //! end frame
     void EndFrame() override;
+
+    //! member function
+    void ExchangeInfo(const int mpiRank, const int mpiSize);
+    void GetMetaInfo(const float &z, const int mpiRank, const int mpiSize);
+
   };
 
 };

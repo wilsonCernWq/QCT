@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <stdexcept>
+#include <vector>
 
 namespace QCT {
 namespace algorithms {
@@ -46,60 +47,49 @@ namespace tree {
   public:
     struct Node {
       int32_t target; /* send/recv target */
-      int32_t index;
-      bool IsSend() const { return index == -1; }
+      enum { SEND, RECV } type;
       bool IsRecv() const { return !IsSend();   }    
-      bool IsRoot() const { return target == -1; }
+      bool IsSend() const { return type == SEND; }
+      void SetSend() { type = SEND; }
+      void SetRecv() { type = RECV; }
     };
-    typedef uint32_t NodeRef;
+    typedef uint32_t RankRef;
+    typedef std::vector<Node>::const_iterator RankIter;
   private:
-    Node    *list = nullptr;
-    NodeRef nlist = 0;
-    void CheckIndex(const NodeRef i) const {
+    void CheckIndex(const RankRef i) const {
 #ifndef NDEBUG
-      if (i < NodeRef(0) || i >= nlist)
-	throw std::runtime_error("TreeDiagram index out of bounds"); 
+      if (i < RankRef(0) || i >= list.size())
+	throw std::runtime_error("TreeDiagram index " + std::to_string(i) + " out of bounds"); 
 #endif
     }
+  private:
+    std::vector<std::vector<Node>> list;
+    RankRef rootRank;
   public:
-    TreeDiagram_Array(const NodeRef n) : nlist(n) {
-      list = new Node[nlist];
-    }
-    virtual ~TreeDiagram_Array() {
-      if (list != nullptr) { delete[] list; }
-    }
+    TreeDiagram_Array() = default;
+    virtual ~TreeDiagram_Array() = default;
 
-    const Node* Data() const { return list; }
-    Node*       Data() { return list; }
+    void Allocate(const RankRef n) { list.resize(n); };
+    RankRef GetRoot() const { return rootRank; }
+    bool IsRoot(const RankRef i) const { return rootRank == i; }
 
-    void Init() {
-      for (auto i = 0; i < nlist; ++i) {
-	list[i].target = -1;
-	list[i].index  = -1;
-      }
-    }
+    const RankIter GetBegin(const RankRef i) const { CheckIndex(i); return list[i].begin(); }
+    const RankIter GetEnd  (const RankRef i) const { CheckIndex(i); return list[i].end(); }
+    bool IsSend(const RankIter it) const { return (*it).IsSend(); }
+    bool IsRecv(const RankIter it) const { return (*it).IsRecv(); }
 
-    Node&       GetParent(const NodeRef i)
-    { CheckIndex(i); return list[i]; }
-    const Node& GetParent(const NodeRef i) const 
-    { CheckIndex(i); return list[i]; }
-
-    bool IsRoot(const NodeRef i) const { 
-      CheckIndex(i);
-      return i == (nlist - 1);
-    }
-
-    bool MoveRef(NodeRef& i) const { 
-      CheckIndex(i);
-      if (list[i].IsSend()) { return false; }
-      else { i = static_cast<NodeRef>(list[i].index); return true; }
+    void Shrink() {
+      list.shrink_to_fit();
+      for (auto& l : list) { l.shrink_to_fit(); }
     }
 
     /*! building the graph */
-    void SetNode(const NodeRef i, const int32_t target, const int32_t index) {
-      CheckIndex(i);
-      list[i].target = target;
-      list[i].index = index;
+    void AddNode(const RankRef rank, const int32_t target, const int32_t action) {
+      CheckIndex(rank); list[rank].emplace_back();
+      list[rank].back().target = target;
+      if (action != -1) { list[rank].back().SetRecv(); }
+      else { list[rank].back().SetSend(); }
+      if (action == -2) { rootRank = rank; }
     }
 
   };
